@@ -11,9 +11,9 @@ def parse_config(filename):
 	tmpMap, tmpInv = {}, {}
 	with open(filename, "r") as config:
 		lines = config.read().splitlines()
-	line = lines.pop(0)
-	minTime = float(line[0]) / 1000.0
-	maxTime = float(line[1]) / 1000.0
+	line = lines.pop(0).split(" ",1)
+	minTime = int(line[0]) / 1000.0
+	maxTime = int(line[1]) / 1000.0
 	for line in lines:
 		lineList = line.split()
 		tmpMap[lineList[0]] = (lineList[1], int(lineList[2]))
@@ -57,7 +57,10 @@ def main():
 	Thread(target=socket_listen_thread).start()
 
 	while True:
-		command, dest, message = raw_input().split(" ", 2)
+		user_input = raw_input()
+		if (user_input == 'bye'):
+			break
+		command, dest, message = user_input.split(" ", 2)
 		if command == "send":
 			print time.time()
 			Thread(target=unicast_send, args=(dest, message)).start()
