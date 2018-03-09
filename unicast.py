@@ -4,10 +4,17 @@ import traceback
 from threading import Thread
 import time
 
+minTime, maxTime = 0,0
+
 def parse_config(filename):
 	config = open(filename, "r")
 	tmpMap, tmpInv = {}, {}
-	for line in config:
+	with open(filename, "r") as config:
+		lines = config.read().splitlines()
+	line = lines.pop(0)
+	minTime = float(line[0]) / 1000.0
+	maxTime = float(line[1]) / 1000.0
+	for line in lines:
 		lineList = line.split()
 		tmpMap[lineList[0]] = (lineList[1], int(lineList[2]))
 		tmpInv[(lineList[1], int(lineList[2]))] = lineList[0]
@@ -34,7 +41,6 @@ def unicast_receive(source, message):
 def socket_listen_thread():
 	sock.listen(5)
 	print "Socket now listening..."
-
 	while True:
 		conn, address = sock.accept()
 
