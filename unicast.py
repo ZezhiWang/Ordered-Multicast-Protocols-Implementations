@@ -3,6 +3,7 @@ import sys
 import traceback
 from threading import Thread
 import time
+from random import *
 
 def parse_config(filename):
 	config = open(filename, "r")
@@ -15,10 +16,22 @@ def parse_config(filename):
 
 config_map, config_inv = parse_config("config.txt")
 
-def unicast_send(destination, message):
+
+def delay_send(destination, message):
+	#minTime, maxTime = config_map 
+
+	minTime = 1
+	maxTime = 3
+	delay_time = randint(minTime, maxTime)
+	Thread(target=unicast_send, args=(destination, message, delay_time)).start()
+	
+
+def unicast_send(destination, message, delay_time):
 	send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	pid = sys.argv[1]
-	time.sleep(5)
+
+	print "Sent " + message + "to process "+ destination + "with system time: " + str(time.time())
+	time.sleep(delay_time)
 	#get the ip address and port number of config file
 	host, port = config_map[destination]
 	#connect to host/port
@@ -29,7 +42,7 @@ def unicast_send(destination, message):
     
 
 def unicast_receive(source, message):
-	print "Process" + source + ": " + message
+	print "Received" + message + "from process" + source + "with system time is" + str(time.time())
 
 def socket_listen_thread():
 	sock.listen(5)
@@ -41,7 +54,6 @@ def socket_listen_thread():
 		ip, port = str(address[0]), int(address[1])
 		pid, message = conn.recv(1024).split(",", 1)
 		unicast_receive(pid, message)
-		print time.time()
 		conn.close()
 
 def main():
@@ -52,9 +64,7 @@ def main():
 
 	while True:
 		command, dest, message = raw_input().split(" ", 2)
-		if command == "send":
-			print time.time()
-			Thread(target=unicast_send, args=(dest, message)).start()
+			delay_send(dest, message)
 
 if __name__ == "__main__":
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
