@@ -12,9 +12,9 @@ def parse_config(filename):
 	tmpMap, tmpInv = {}, {}
 	with open(filename, "r") as config:
 		lines = config.read().splitlines()
-	line = lines.pop(0)
-	minTime = float(line[0]) / 1000.0
-	maxTime = float(line[1]) / 1000.0
+	line = lines.pop(0).split(" ",1)
+	minTime = int(line[0]) / 1000.0
+	maxTime = int(line[1]) / 1000.0
 	for line in lines:
 		lineList = line.split()
 		tmpMap[lineList[0]] = (lineList[1], int(lineList[2]))
@@ -27,9 +27,7 @@ config_map, config_inv = parse_config("config.txt")
 def delay_send(destination, message):
 	#minTime, maxTime = config_map 
 
-	minTime = 1
-	maxTime = 3
-	delay_time = randint(minTime, maxTime)
+	delay_time = uniform(minTime, maxTime)
 	Thread(target=unicast_send, args=(destination, message, delay_time)).start()
 	
 
@@ -37,7 +35,7 @@ def unicast_send(destination, message, delay_time):
 	send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	pid = sys.argv[1]
 
-	print "Sent " + message + "to process "+ destination + "with system time: " + str(time.time())
+	print "Sent " + message + " to process "+ destination + " with system time: " + str(time.time())
 	time.sleep(delay_time)
 	#get the ip address and port number of config file
 	host, port = config_map[destination]
@@ -49,7 +47,7 @@ def unicast_send(destination, message, delay_time):
     
 
 def unicast_receive(source, message):
-	print "Received" + message + "from process" + source + "with system time is" + str(time.time())
+	print "Received" + message + " from process " + source + " with system time is " + str(time.time())
 
 def socket_listen_thread():
 	sock.listen(5)
@@ -69,7 +67,11 @@ def main():
 	Thread(target=socket_listen_thread).start()
 
 	while True:
-		command, dest, message = raw_input().split(" ", 2)
+		user_input = raw_input()
+		if (user_input == 'bye'):
+			break
+		command, dest, message = user_input.split(" ", 2)
+		if command == "send":
 			delay_send(dest, message)
 
 if __name__ == "__main__":
