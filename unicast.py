@@ -4,9 +4,6 @@ import traceback
 from threading import Thread
 import time
 
-config_map, config_inv = {}, {}
-
-
 def parse_config(filename):
 	config = open(filename, "r")
 	tmpMap, tmpInv = {}, {}
@@ -15,6 +12,8 @@ def parse_config(filename):
 		tmpMap[lineList[0]] = (lineList[1], int(lineList[2]))
 		tmpInv[(lineList[1], int(lineList[2]))] = lineList[0]
 	return tmpMap, tmpInv
+
+config_map, config_inv = parse_config("config.txt")
 
 def unicast_send(destination, message):
 	send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -48,7 +47,6 @@ def socket_listen_thread():
 		conn.close()
 
 def main():
-	config_map, config_inv = parse_config("config.txt")
 	pid = sys.argv[1]
 	sock.bind((config_map[pid][0], config_map[pid][1]))
 
