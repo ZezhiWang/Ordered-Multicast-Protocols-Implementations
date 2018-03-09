@@ -17,17 +17,15 @@ config_map, config_inv = parse_config("config.txt")
 
 def unicast_send(destination, message):
 	send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    pid = sys.argv[1]
-    time.sleep(5)
-    #get the ip address and port number of config file
-    host, port = config_map[destination]
-    #connect to host/port
-    send_socket.connect((host, port))
-
-    #send the message
-    send_socket.send(pid + "," + message)
-
-    send_socket.close()
+	pid = sys.argv[1]
+	time.sleep(5)
+	#get the ip address and port number of config file
+	host, port = config_map[destination]
+	#connect to host/port
+	send_socket.connect((host, port))	
+	#send the message
+	send_socket.send(pid + "," + message)	
+	send_socket.close()
     
 
 def unicast_receive(source, message):
