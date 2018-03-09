@@ -14,15 +14,14 @@ def parse_config(filename):
 		config_inv[(lineList[1], int(lineList[2]))] = lineList[0]
 
 def unicast_send(destination, message):
+    pid = sys.argv[1]
     #get the ip address and port number of config file
-    print config_map[destination]
     host, port = config_map[destination]
-    print host, port
     #connect to host/port
-    sock.connect((host, port))
+    send_socket.connect((host, port))
 
     #send the message
-    sock.send(message)
+    send_socket.send(pid + "," + message)
 
 def unicast_receive(source, message):
 	print "Process" + source + ": " + message
@@ -33,18 +32,17 @@ def socket_listen_thread():
 
 	while True:
 		conn, address = sock.accept()
-		print "accept"
 
 		ip, port = str(address[0]), int(address[1])
-		message = conn.recv(1024)
-		unicast_receive(config_inv(ip, port), message)
+		pid, message = conn.recv(1024).split(",", 1)
+		unicast_receive(pid, message)
 		conn.close()
 
 
 def main():
 	parse_config("config.txt")
-	id = sys.argv[1]
-	sock.bind((config_map[id][0], config_map[id][1]))
+	pid = sys.argv[1]
+	sock.bind((config_map[pid][0], config_map[pid][1]))
 
 	Thread(target=socket_listen_thread).start()
 
@@ -55,6 +53,8 @@ def main():
 
 if __name__ == "__main__":
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
 	main()
 
 

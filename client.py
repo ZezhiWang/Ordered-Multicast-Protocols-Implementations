@@ -6,7 +6,7 @@ def Main():
     #TCP/IP4
     soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     host = "127.0.0.1"
-    port = 8888
+    port = 8881
     soc.connect((host, port))
 
     print("Enter 'quit' to exit")

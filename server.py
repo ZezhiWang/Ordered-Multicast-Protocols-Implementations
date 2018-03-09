@@ -18,7 +18,7 @@ def Main():
 
 def start_server():
     host = "127.0.0.1"
-    port = 8888         # arbitrary non-privileged port
+    port = 8881         # arbitrary non-privileged port
     #create a socket object
     soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print("Socket created")
