@@ -5,7 +5,7 @@ from threading import Thread
 import time
 from random import *
 
-minTime, maxTime = 0,0
+
 
 def parse_config(filename):
 	config = open(filename, "r")
@@ -15,23 +15,26 @@ def parse_config(filename):
 	line = lines.pop(0).split(" ",1)
 	minTime = int(line[0]) / 1000.0
 	maxTime = int(line[1]) / 1000.0
+	print "test: "
+	print minTime, maxTime
 	for line in lines:
 		lineList = line.split()
 		tmpMap[lineList[0]] = (lineList[1], int(lineList[2]))
 		tmpInv[(lineList[1], int(lineList[2]))] = lineList[0]
-	return tmpMap, tmpInv
+	return minTime, maxTime, tmpMap, tmpInv
 
-config_map, config_inv = parse_config("config.txt")
+minTime, maxTime, config_map, config_inv = parse_config("config.txt")
 
 
-def delay_send(destination, message):
-	#minTime, maxTime = config_map 
+def unicast_send(destination, message):
+	#minTime, maxTime = config_map
 
 	delay_time = uniform(minTime, maxTime)
-	Thread(target=unicast_send, args=(destination, message, delay_time)).start()
-	
+	print minTime, maxTime
+	Thread(target=delay_send, args=(destination, message, delay_time)).start()
 
-def unicast_send(destination, message, delay_time):
+
+def delay_send(destination, message, delay_time):
 	send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	pid = sys.argv[1]
 
@@ -40,11 +43,11 @@ def unicast_send(destination, message, delay_time):
 	#get the ip address and port number of config file
 	host, port = config_map[destination]
 	#connect to host/port
-	send_socket.connect((host, port))	
+	send_socket.connect((host, port))
 	#send the message
-	send_socket.send(pid + "," + message)	
+	send_socket.send(pid + "," + message)
 	send_socket.close()
-    
+
 
 def unicast_receive(source, message):
 	print "Received" + message + " from process " + source + " with system time is " + str(time.time())
@@ -72,9 +75,8 @@ def main():
 			break
 		command, dest, message = user_input.split(" ", 2)
 		if command == "send":
-			delay_send(dest, message)
+			unicast_send(dest, message)
 
 if __name__ == "__main__":
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	
 	main()
