@@ -5,8 +5,6 @@ from threading import Thread
 import time
 from random import *
 
-
-
 def parse_config(filename):
 	config = open(filename, "r")
 	tmpMap, tmpInv = {}, {}
@@ -50,9 +48,12 @@ def delay_send(destination, message, delay_time):
 
 
 def unicast_receive(source, message):
-	print "Received" + message + " from process " + source + " with system time is " + str(time.time())
+	print "Received " + message + " from process " + source + " with system time is " + str(time.time())
 
 def socket_listen_thread():
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	pid = sys.argv[1]
+	sock.bind((config_map[pid][0], config_map[pid][1]))
 	sock.listen(5)
 	print "Socket now listening..."
 	while True:
@@ -64,11 +65,7 @@ def socket_listen_thread():
 		conn.close()
 
 def main():
-	pid = sys.argv[1]
-	sock.bind((config_map[pid][0], config_map[pid][1]))
-
 	Thread(target=socket_listen_thread).start()
-
 	while True:
 		user_input = raw_input()
 		if (user_input == 'bye'):
@@ -78,5 +75,4 @@ def main():
 			unicast_send(dest, message)
 
 if __name__ == "__main__":
-	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	main()
