@@ -26,19 +26,20 @@ def parse_config(filename):
 delay_range = [0,0]
 delay_range[0], delay_range[1], config_map, config_inv = parse_config("config.txt")
 
-
+def unicast_receive(self, source, message):
+	print "Received " + message + " from process " + source + " with system time is " + str(time.time())
 class Unicast:
 
 	#initialized config file and max number of nodes in the system
-	def __init__(self, config_map, max_number, delay_range, config_inv):
+	def __init__(self, config_map, max_number, delay_range, config_inv, strategy=unicast_receive):
 		self.config_map = config_map
 		self.max_nodes = max_number
 		self.delay_range = delay_range
 		self.config_inv = config_inv
-		Thread(target=self.socket_listen_thread).start()
+		Thread(target=self.socket_listen_thread, args=strategy).start()
 
 	#listening from other nodes
-	def socket_listen_thread(self):
+	def socket_listen_thread(self, strategy):
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		pid = sys.argv[1]
 		sock.bind((self.config_map[pid][0], self.config_map[pid][1]))
@@ -49,7 +50,7 @@ class Unicast:
 
 			ip, port = str(address[0]), int(address[1])
 			pid, message = conn.recv(1024).split(",", 1)
-			self.unicast_receive(pid, message)
+			strategy(pid, message)
 			conn.close()
 
 
@@ -75,8 +76,6 @@ class Unicast:
 		send_socket.close()
 
 
-	def unicast_receive(self, source, message):
-		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
 
 def main():
 	unicast_node = Unicast(config_map, 5, delay_range, config_inv)	
