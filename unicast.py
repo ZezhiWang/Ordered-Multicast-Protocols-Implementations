@@ -55,7 +55,7 @@ class Unicast:
 		self.max_nodes = max_number
 		self.delay_range = delay_range
 		self.config_inv = config_inv
-		Thread(target=self.socket_listen_thread, args=strategy).start()
+		Thread(target=self.socket_listen_thread, args=(strategy,)).start()
 
 	#listening from other nodes
 	def socket_listen_thread(self, strategy):

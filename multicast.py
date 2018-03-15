@@ -3,8 +3,8 @@ import time
 import sys
 from threading import Thread
 
-_, _, config_map, config_inv = unicast.parse_config("config.txt")
-
+mintime, maxtime, config_map, config_inv = unicast.parse_config("config.txt")
+delay_range = [mintime, maxtime]
 # hold-back queue
 hbQueue = []
 
@@ -18,7 +18,7 @@ def fifoInit():
 	S_fifo = 0
 	# seq num of latest group msg cur server has delievered from other server
 	global R_fifo
-	R_fifo = [0 for i in range(len(config_map.keys))]
+	R_fifo = [0 for i in range(len(config_map.keys()))]
 
 def fifo(msg):
 	# increment S by 1
@@ -134,15 +134,16 @@ orders = [fifo, total, causal]
 recvs = [fifoRecv, totalRecv, causalRecv]
 
 def Main():
-	order, maxServer = sys.argv[1:3]
+	order, maxServer = sys.argv[2:4]
 	# init node
-	inits[order]()
+	inits[int(order)]()
 	global node
-	node = unicast.Unicast(config_map, maxServer, delay_range, config_inv, recvs[order])
+	print maxServer
+	node = unicast.Unicast(config_map, int(maxServer), delay_range, config_inv, recvs[int(order)])
 	
 	while True:
 		_,msg = raw_input().split(" ",1)
-		orders[order](msg)
+		orders[int(order)](msg)
 
 if __name__ == "__main__":
 	Main()
