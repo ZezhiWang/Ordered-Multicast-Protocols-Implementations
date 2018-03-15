@@ -1,25 +1,12 @@
 import unicast
 import time
+import sys
 from threading import Thread
-
-inits = [fifoInit, totalInit, causalInit]
-orders = [fifo, total, causal]
-recvs = [fifoRecv, totalRecv, causalRecv]
 
 _, _, config_map, config_inv = unicast.parse_config("config.txt")
 
 # hold-back queue
 hbQueue = []
-
-def Main():
-	order, maxServer = sys.argv[1:3]
-	# init node
-	inits[order]()
-	global node = unicast.Unicast(config_map, maxServer, delay_range, config_inv, recvs[order])
-	
-	while True:
-		_,msg = raw_input().split(" ",1)
-		orders[order](msg)
 
 def basic(msg):
 	for idx in config_map.keys:
@@ -27,15 +14,17 @@ def basic(msg):
 
 def fifoInit():
 	# num of msg cur server has sent to group
-	global S_fifo = 0
+	global S_fifo
+	S_fifo = 0
 	# seq num of latest group msg cur server has delievered from other server
-	global R_fifo = [0 for i in range(len(config_map.keys))]
+	global R_fifo
+	R_fifo = [0 for i in range(len(config_map.keys))]
 
 def fifo(msg):
 	# increment S by 1
 	S_fifo += 1
 	# piggy back S into msg
-	val = str(S_fifo) + "," + msg
+	val = {'seq':S_fifo, 'msg':msg}
 	# B-multicast
 	basic(val)
 
@@ -60,23 +49,24 @@ def fifoRecv(pid, msg):
 				R_fifo[sender] += 1
 		# else reject
 		return
-	# init hold-back queue
-	seq, val = conn.recv(1024).split(",", 1)
+	seq, val = msg.values
 	helper(int(pid), seq, val)
 
 def totalInit():
 	if ID == 0:
 		# init sequencer
-		global S_total = 0
+		global S_total
+		S_total = 0
 	else:
 		# init group member
-		global R_total = 0
+		global R_total
+		R_total = 0
 
 def total(msg):
 	# piggyback flag
-	msg = "mem," + str(R_total) + msg
+	val = {'flag': 0, 'R': R_total, 'msg': msg}
 	# basic multicast msg
-	basic(msg)
+	basic(val)
 
 def totalRecv(pid,msg):
 	def helper(seq, pid):
@@ -89,18 +79,18 @@ def totalRecv(pid,msg):
 		totalSeqRecv(pid)
 	else:
 		# split senderID and seq and msg from val
-		flag, val = msg.split(",", 1)
-		if flag == "mem":
-			seq, msg = val.split(",",1)
-			hbQueue.append((pid, int(seq), msg))
+		flag = msg['flag']
+		if flag == 0:
+			seq, val = msg['R'], msg['msg']
+			hbQueue.append((pid, seq, val))
 		else:
-			seq, pid = val.split(",",1)
-			helper(int(seq), pid)
+			seq, pid = msg['S'], msg['pid']
+			helper(seq, pid)
 
 def totalSeqRecv(pid):
 	if pid != str(ID):
 		# construct msg
-		msg = "order," + str(S_total) + pid
+		msg = {'flag':1, 'S': S_total, 'pid':pid}
 		# basic multicast msg
 		basic(msg)
 		# increment S_Total
@@ -108,46 +98,51 @@ def totalSeqRecv(pid):
 
 def causalInit():
 	# vector timestamp init
-	global V = [0 for idx in len(config_map.keys)]
-	# strat listener
-	Thread(target = causalRecv).start()
+	global V_causal
+	V_causal = [0 for idx in len(config_map.keys)]
 
 def causal(msg):
 	# increment V[i] by 1
-	V[ID] += 1
+	V_causal[ID] += 1
 	# piggy back vector timestamp
-
+	val = {'vec': V_causal, 'msg':msg}
 	# basic mult
-	basic(msg)
+	basic(val)
 
-def causalRecv():
+def causalRecv(pid, msg):
 	def helper(sender, vec, val):
 		# place val in hold-back queue
-		queue.insert(0,(sender, vec, msg))
+		hbQueue.insert(0,(sender, vec, msg))
 		# loop through queue
-		for val in queue:
+		for val in hbQueue:
 			sender, vec, msg = val
-			if vec[sender] = V[sender] + 1:
+			if vec[sender] == V_causal[sender] + 1:
 				flag = True
-				for idx in xrange(len(V)):
-					if vec[idx] > V[idx]:
+				for idx in xrange(len(V_causal)):
+					if vec[idx] > V_causal[idx]:
 						flag = False
 				if flag:
 					deliever(sender, msg)
-		return
-	# init hold-back queue
-	queue = []
-	# init sock to listen
-	sock.listen(5)
-	while True:
-		conn,_ = sock.accept()
-		# split senderID time, and msg from val
-		sender, vec, msg = conn.recv(1024).split(",", 2)
-		helper(sender, vec, val)
+	vec, val = msg['vec'], msg['msg']
+	helper(pid, vec, val)
 
 def deliever(sender, msg):
 	print sender, time.time(), msg
 
+inits = [fifoInit, totalInit, causalInit]
+orders = [fifo, total, causal]
+recvs = [fifoRecv, totalRecv, causalRecv]
+
+def Main():
+	order, maxServer = sys.argv[1:3]
+	# init node
+	inits[order]()
+	global node
+	node = unicast.Unicast(config_map, maxServer, delay_range, config_inv, recvs[order])
+	
+	while True:
+		_,msg = raw_input().split(" ",1)
+		orders[order](msg)
 
 if __name__ == "__main__":
 	Main()
