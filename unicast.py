@@ -27,23 +27,23 @@ def parse_config(filename):
 delay_range = [0,0]
 delay_range[0], delay_range[1], config_map, config_inv = parse_config("config.txt")
 
-def unicast_receive(self, source, message):
-	print "Received " + message + " from process " + source + " with system time is " + str(time.time())
 class Unicast:
+	def unicast_receive(self, source, message):
+		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
 
 	#initialized config file and max number of nodes in the system
-	def __init__(self, config_map, max_number, delay_range, config_inv, strategy=unicast_receive):
+	def __init__(self, pid, max_number, delay_range, strategy=unicast_receive, config_map = config_map, config_inv = config_inv, ):
 		self.config_map = config_map
 		self.max_nodes = max_number
 		self.delay_range = delay_range
 		self.config_inv = config_inv
-		Thread(target=self.socket_listen_thread, args=strategy).start()
+		self.pid = pid
+		Thread(target=self.socket_listen_thread, args=(strategy,)).start()
 
 	#listening from other nodes
 	def socket_listen_thread(self, strategy):
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		pid = sys.argv[1]
-		sock.bind((self.config_map[pid][0], self.config_map[pid][1]))
+		sock.bind((self.config_map[self.pid][0], self.config_map[self.pid][1]))
 		sock.listen(self.max_nodes)
 		print "Socket now listening..."
 		while True:
@@ -85,7 +85,8 @@ class Unicast:
 
 
 def main():
-	unicast_node = Unicast(config_map, 5, delay_range, config_inv)	
+	pid = sys.argv[1]
+	unicast_node = Unicast(pid, 5, delay_range)	
 	while True:
 		user_input = raw_input()
 		if (user_input == 'bye'):

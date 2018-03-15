@@ -3,146 +3,169 @@ import time
 import sys
 from threading import Thread
 
-_, _, config_map, config_inv = unicast.parse_config("config.txt")
+config_map = unicast.config_map
 
-# hold-back queue
-hbQueue = []
+class FifoMult:
+	def __basic(self, msg):
+		for idx in config_map.keys():
+			self.node.unicast_send(idx, msg)
 
-def basic(msg):
-	for idx in config_map.keys:
-		node.unicast_send(idx, msg)
+	def __deliever(self, sender, msg):
+		print sender, time.time(), msg
 
-def fifoInit():
-	# num of msg cur server has sent to group
-	global S_fifo
-	S_fifo = 0
-	# seq num of latest group msg cur server has delievered from other server
-	global R_fifo
-	R_fifo = [0 for i in range(len(config_map.keys))]
+	def send(self, msg):
+		# increment S by 1
+		self.S_fifo += 1
+		# piggy back S into msg
+		val = {'seq':self.S_fifo, 'msg':msg}
+		# B-multicast
+		self.basic(val)
 
-def fifo(msg):
-	# increment S by 1
-	S_fifo += 1
-	# piggy back S into msg
-	val = {'seq':S_fifo, 'msg':msg}
-	# B-multicast
-	basic(val)
+	def recv(self,pid, msg):
+		def helper(sender, seq, msg):
+			# if S = R[q] + 1
+			if seq == self.R_fifo[sender] + 1:
+				# Fifo deliever msg
+				self.deliever(sender, msg)
+				# increment R[q]
+				self.R_fifo[sender] += 1
+			# if S > R[q]
+			elif seq > self.R_fifo[sender] + 1:
+				# put msg in hold-back queue
+				self.hbQueue.append((sender,seq,msg))
+			# check msg in hold-back queue
+			for val in self.hbQueue:
+				sender,seq,msg = val
+				if seq == self.R_fifo[sender] + 1:
+					self.hbQueue.remove(val)
+					self.deliever(sender, msg)
+					self.R_fifo[sender] += 1
+			# else reject
+			return
+		seq, val = msg['seq'], msg['msg']
+		helper(int(pid), seq, val)
 
-def fifoRecv(pid, msg):
-	def helper(sender, seq, msg):
-		# if S = R[q] + 1
-		if seq == R_fifo[sender] + 1:
-			# Fifo deliever msg
-			deliever(sender, msg)
-			# increment R[q]
-			R[sender] += 1
-		# if S > R[q]
-		elif seq > R_fifo[sender] + 1:
-			# put msg in hold-back queue
-			hbQueue.append((sender,seq,msg))
-		# check msg in hold-back queue
-		for val in hbQueue:
-			sender,seq,msg = val
-			if seq == R_fifo[sender] + 1:
-				hbQueue.remove(val)
-				deliever(sender, msg)
-				R_fifo[sender] += 1
-		# else reject
-		return
-	seq, val = msg.values
-	helper(int(pid), seq, val)
+	def __init__(self, pid, maxServer, delay_range):
+		# num of msg cur server has sent to group
+		self.S_fifo = 0
+		# seq num of latest group msg cur server has delievered from other server
+		self.R_fifo = [0 for i in config_map.keys()]
+		# init unicast client
+		self.node = unicast.Unicast(pid, maxServer, delay_range, self.recv)
+		# hold-back queue
+		self.hbQueue = []
 
-def totalInit():
-	if ID == 0:
-		# init sequencer
-		global S_total
-		S_total = 0
-	else:
-		# init group member
-		global R_total
-		R_total = 0
+class TotalMult:
+	def __basic(self, msg):
+		for idx in config_map.keys():
+			self.node.unicast_send(idx, msg)
 
-def total(msg):
-	# piggyback flag
-	val = {'flag': 0, 'R': R_total, 'msg': msg}
-	# basic multicast msg
-	basic(val)
+	def __deliever(self, sender, msg):
+		print sender, time.time(), msg
 
-def totalRecv(pid,msg):
-	def helper(seq, pid):
-		for val in hbQueue:
-			sender, seqTmp, msg = val
-			if seqTmp == seq:
-				hbQueue.remove(val)
-				deliever(sender, msg)
-	if ID == 0:
-		totalSeqRecv(pid)
-	else:
-		# split senderID and seq and msg from val
-		flag = msg['flag']
-		if flag == 0:
-			seq, val = msg['R'], msg['msg']
-			hbQueue.append((pid, seq, val))
-		else:
-			seq, pid = msg['S'], msg['pid']
-			helper(seq, pid)
-
-def totalSeqRecv(pid):
-	if pid != str(ID):
-		# construct msg
-		msg = {'flag':1, 'S': S_total, 'pid':pid}
+	def send(self, msg):
+		# piggyback flag
+		val = {'flag': 0, 'R': R_total, 'msg': msg}
 		# basic multicast msg
-		basic(msg)
-		# increment S_Total
-		S_total += 1
+		self.basic(val, node)
 
-def causalInit():
-	# vector timestamp init
-	global V_causal
-	V_causal = [0 for idx in len(config_map.keys)]
+	def __seqRecv(self, pid):
+		if pid != self.pid:
+			# construct msg
+			msg = {'flag':1, 'S': S_total, 'pid':pid}
+			# basic multicast msg
+			self.basic(msg)
+			# increment S_Total
+			self.S_total += 1
 
-def causal(msg):
-	# increment V[i] by 1
-	V_causal[ID] += 1
-	# piggy back vector timestamp
-	val = {'vec': V_causal, 'msg':msg}
-	# basic mult
-	basic(val)
+	def recv(self, pid, msg):
+		def helper(seq, pid):
+			for val in self.hbQueue:
+				sender, seqTmp, msg = val
+				if seqTmp == seq:
+					self.hbQueue.remove(val)
+					self.deliever(sender, msg)
+					self.R_total += 1
+		if pid == '0':
+			self.SeqRecv(pid)
+		else:
+			# split senderID and seq and msg from val
+			flag = msg['flag']
+			if flag == 0:
+				seq, val = msg['R'], msg['msg']
+				hbQueue.append((pid, seq, val))
+			else:
+				seq, pid = msg['S'], msg['pid']
+				helper(seq, pid)
 
-def causalRecv(pid, msg):
-	def helper(sender, vec, val):
-		# place val in hold-back queue
-		hbQueue.insert(0,(sender, vec, msg))
-		# loop through queue
-		for val in hbQueue:
-			sender, vec, msg = val
-			if vec[sender] == V_causal[sender] + 1:
-				flag = True
-				for idx in xrange(len(V_causal)):
-					if vec[idx] > V_causal[idx]:
-						flag = False
-				if flag:
-					deliever(sender, msg)
-	vec, val = msg['vec'], msg['msg']
-	helper(pid, vec, val)
+	def __init__(self, pid, maxServer, delay_range):
+		# hold-back queue
+		hbQueue = []
+		if int(pid) == 0:
+			# init sequencer
+			self.S_total = 0
+		else:
+			# init group member
+			self.R_total = 0
+		# init unicast client
+		self.node = unicast.Unicast(pid, maxServer, delay_range, self.recv)
 
-def deliever(sender, msg):
-	print sender, time.time(), msg
 
-inits = [fifoInit, totalInit, causalInit]
-orders = [fifo, total, causal]
-recvs = [fifoRecv, totalRecv, causalRecv]
+class CausalMult:
+	def __basic(self, msg):
+		for idx in config_map.keys():
+			self.node.unicast_send(idx, msg)
 
+	def __deliever(self, sender, msg):
+		print sender, time.time(), msg
+
+	def send(self,msg):
+		# increment V[i] by 1
+		self.V_causal[ID] += 1
+		# piggy back vector timestamp
+		val = {'vec': V_causal, 'msg':msg}
+		# basic mult
+		self.basic(val, node)
+	
+	def recv(self, pid, msg):
+		def helper(sender, vec, val):
+			# place val in hold-back queue
+			self.hbQueue.append((sender, vec, msg))
+			# loop through queue
+			for val in self.hbQueue:
+				sender, vec, msg = val
+				if vec[sender] == self.V_causal[sender] + 1:
+					flag = True
+					for idx in xrange(len(config_map.keys())):
+						if vec[idx] > self.V_causal[idx]:
+							flag = False
+					if flag:
+						self.deliever(sender, msg)
+		vec, val = msg['vec'], msg['msg']
+		helper(pid, vec, val)
+
+	def __init__(self, pid, maxServer, delay_range):
+		# hold-back queue
+		hbQueue = []
+		# vector timestamp init
+		self.V_causal = [0 for idx in config_map.keys()]
+		# init unicast client
+		self.node = unicast.Unicast(pid, config_map, maxServer, delay_range)
+
+mults = [FifoMult, TotalMult, CausalMult]
 def Main():
-	order, maxServer = sys.argv[1:3]
-	# init node
-	inits[order]()
-	global node
-	node = unicast.Unicast(config_map, maxServer, delay_range, config_inv, recvs[order])
+	# pid, order, maxServer = sys.argv[1:4]
+	pid = '1'
+	order = 2
+	maxServer = 3
+	# delayRange
+	delay_range = 5
+	
+	node = mults[order](pid, maxServer, delay_range)
 	
 	while True:
 		_,msg = raw_input().split(" ",1)
-		orders[order](msg)
+		node.send(msg)
 
 if __name__ == "__main__":
 	Main()
