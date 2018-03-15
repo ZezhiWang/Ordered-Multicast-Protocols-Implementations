@@ -4,6 +4,7 @@ import traceback
 from threading import Thread
 import time
 from random import *
+import pickle
 
 #config map  str(id) -> str(ip), int(port)
 #config inv   str(ip), int -> str(id_
@@ -49,7 +50,8 @@ class Unicast:
 
 			ip, port = str(address[0]), int(address[1])
 			pid, message = conn.recv(1024).split(",", 1)
-			self.unicast_receive(pid, message)
+			received = pickle.loads(message)
+			self.unicast_receive(pid, received)
 			conn.close()
 
 
@@ -71,12 +73,15 @@ class Unicast:
 		#connect to host/port
 		send_socket.connect((host, port))
 		#send the message
-		send_socket.send(pid + "," + message)
+		msg = [1, 2, 3]
+		data = pickle.dumps(msg)
+		send_socket.send(pid + "," + data)
 		send_socket.close()
 
 
 	def unicast_receive(self, source, message):
-		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
+		#print "Received " + message + " from process " + source + " with system time is " + str(time.time())
+		print message
 
 def main():
 	unicast_node = Unicast(config_map, 5, delay_range, config_inv)	
