@@ -28,11 +28,29 @@ delay_range = [0,0]
 delay_range[0], delay_range[1], config_map, config_inv = parse_config("config.txt")
 
 class Unicast:
+	'''
+	Implementation of Unicast Functionalities, send and receive
+	
+	Attributes:
+		config_map(dict): id(str) -> ip(str), port(int)
+		max_number(int): capacity of the network
+		delay_range(list): [0] is min delay, [1] is max delay
+		strategy(func): the stragey for order. Default unicaste_received
+	'''
+
 	def unicast_receive(self, source, message):
 		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
 
-	#initialized config file and max number of nodes in the system
 	def __init__(self, pid, max_number, delay_range, strategy=unicast_receive, config_map = config_map, config_inv = config_inv, ):
+		'''
+		Initialization of the object
+
+		Args:
+			config_map(dict): id(str) -> ip(str), port(int)
+			max_number(int): capacity of the network
+			delay_range(list): [0] is min delay, [1] is max delay
+			strategy(func): the stragey for order. Default unicaste_received
+		'''
 		self.config_map = config_map
 		self.max_nodes = max_number
 		self.delay_range = delay_range

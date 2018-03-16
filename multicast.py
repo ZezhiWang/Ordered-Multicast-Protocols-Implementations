@@ -154,10 +154,7 @@ class CausalMult:
 
 mults = [FifoMult, TotalMult, CausalMult]
 def Main():
-	# pid, order, maxServer = sys.argv[1:4]
-	pid = '1'
-	order = 2
-	maxServer = 3
+	pid, order, maxServer = sys.argv[1:4]
 	# delayRange
 	delay_range = 5
 	
