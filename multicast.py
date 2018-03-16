@@ -65,14 +65,14 @@ class TotalMult:
 
 	def send(self, msg):
 		# piggyback flag
-		val = {'flag': 0, 'R': R_total, 'msg': msg}
+		val = {'flag': 0, 'R': self.R_total, 'msg': msg}
 		# basic multicast msg
-		self.__basic(val, node)
+		self.__basic(val)
 
 	def __seqRecv(self, pid):
 		if pid != self.pid:
 			# construct msg
-			msg = {'flag':1, 'S': S_total, 'pid':pid}
+			msg = {'flag':1, 'S': self.S_total, 'pid':pid}
 			# basic multicast msg
 			self.__basic(msg)
 			# increment S_Total
@@ -87,20 +87,20 @@ class TotalMult:
 					self.__deliever(sender, msg)
 					self.R_total += 1
 		if pid == '0':
-			self.SeqRecv(pid)
+			self.__seqRecv(pid)
 		else:
 			# split senderID and seq and msg from val
 			flag = msg['flag']
 			if flag == 0:
 				seq, val = msg['R'], msg['msg']
-				hbQueue.append((pid, seq, val))
+				self.hbQueue.append((pid, seq, val))
 			else:
 				seq, pid = msg['S'], msg['pid']
 				helper(seq, pid)
 
 	def __init__(self, pid, maxServer, delay_range):
 		# hold-back queue
-		hbQueue = []
+		self.hbQueue = []
 		if int(pid) == 0:
 			# init sequencer
 			self.S_total = 0
@@ -108,7 +108,7 @@ class TotalMult:
 			# init group member
 			self.R_total = 0
 		# init unicast client
-		self.node = unicast.Unicast(pid, maxServer, delay_range, self.recv)
+		self.node = unicast.Unicast(pid, int(maxServer), delay_range, self.recv)
 
 
 class CausalMult:
