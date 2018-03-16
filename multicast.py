@@ -119,7 +119,7 @@ class CausalMult:
 			self.node.unicast_send(idx, msg)
 
 	def __deliever(self, sender, msg):
-		print sender, time.time(), msg
+		print "Receive from %s process %d with time %f" % ( msg[2], sender, time.time())
 
 	def send(self,msg):
 		# increment V[i] by 1
@@ -134,20 +134,22 @@ class CausalMult:
 			# place val in hold-back queue
 			self.hbQueue.append((sender, vec, val))
 			# loop through queue
+			#print "received ", vec
+			#print "Us: ", self.V_causal
 			for val in self.hbQueue:
 				sender, vec, msg = val
-				if vec[sender] == self.V_causal[sender] + 1:
+				if vec[sender] == self.V_causal[sender] + 1 or sender == self.pid: #make sure deliver myself
 					flag = True
 					for idx in xrange(len(config_map.keys())):
-						if vec[idx] > self.V_causal[idx]:
+						if vec[idx] > self.V_causal[idx] and idx != sender:
 							flag = False
 					if flag:
 						self.__deliever(sender, val)
 						self.hbQueue.remove(val)
-						self.V_causal[sender] +=1
 						for idx in xrange(len(config_map.keys())):
 							if idx != self.pid:
 								self.V_causal[idx] = max(self.V_causal[idx], vec[idx])
+			#print"after: ", self.V_causal
 		vec, val = msg['vec'], msg['msg']
 		helper(int(pid), vec, val)
 
