@@ -63,7 +63,7 @@ class Unicast:
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		sock.bind((self.config_map[self.pid][0], self.config_map[self.pid][1]))
 		sock.listen(self.max_nodes)
-		print "Socket now listening..."
+		print "We can now start to chat.."
 		while True:
 			conn, address = sock.accept()
 
@@ -77,7 +77,7 @@ class Unicast:
 	def unicast_send(self, destination, message):
 		#minTime, maxTime = config_map
 
-		delay_time = uniform(delay_range[0], delay_range[1])
+		delay_time = uniform(self.delay_range[0], self.delay_range[1])
 		Thread(target=self.delay_send, args=(destination, message, delay_time)).start()
 
 
@@ -85,8 +85,7 @@ class Unicast:
 		send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		pid = sys.argv[1]
 
-		print "Sent ", message
-		print " to process "+ destination + " with system time: " + str(time.time())
+		print "Sent " + message['msg'] + " to process "+ destination + " with system time: " + str(time.time())
 		time.sleep(delay_time)
 		#get the ip address and port number of config file
 		host, port = self.config_map[destination]
