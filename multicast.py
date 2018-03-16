@@ -11,7 +11,7 @@ class FifoMult:
 			self.node.unicast_send(idx, msg)
 
 	def __deliever(self, sender, msg):
-		print sender, time.time(), msg
+		print "Receive from %s process %d with time %f" % ( msg, sender, time.time())
 
 	def send(self, msg):
 		# increment S by 1
@@ -50,6 +50,7 @@ class FifoMult:
 		self.S_fifo = 0
 		# seq num of latest group msg cur server has delievered from other server
 		self.R_fifo = [0 for i in config_map.keys()]
+		self.maxServer = maxServer
 		# init unicast client
 		self.node = unicast.Unicast(pid, maxServer, delay_range, self.recv)
 		# hold-back queue
@@ -108,6 +109,7 @@ class TotalMult:
 			# init group member
 			self.R_total = 0
 		# init unicast client
+		self.maxServer = maxServer
 		self.node = unicast.Unicast(pid, int(maxServer), delay_range, self.recv)
 
 
@@ -141,6 +143,11 @@ class CausalMult:
 							flag = False
 					if flag:
 						self.__deliever(sender, val)
+						self.hbQueue.remove(val)
+						self.V_causal[sender] +=1
+						for idx in xrange(len(config_map.keys())):
+							if idx != self.pid:
+								self.V_causal[idx] = max(self.V_causal[idx], vec[idx])
 		vec, val = msg['vec'], msg['msg']
 		helper(int(pid), vec, val)
 
@@ -150,6 +157,7 @@ class CausalMult:
 		self.pid = int(pid)
 		# vector timestamp init
 		self.V_causal = [0 for idx in config_map.keys()]
+		self.maxServer = maxServer
 		# init unicast client
 		self.node = unicast.Unicast(pid, maxServer, delay_range, self.recv)
 
@@ -160,11 +168,13 @@ mults = [FifoMult, TotalMult, CausalMult]
 def Main():
 	pid, order, maxServer = sys.argv[1:4]
 	# delayRange
-	delay_range = 5
+	delay_range = [2, 5]
+
+	print "<<<<<<< chat room >>>>>>>>"
 	
-	node = mults[int(order)](pid, int(maxServer), delay_range)
-	
+	node = mults[int(order)](pid, int(maxServer), delay_range)	
 	while True:
+		print "Enter your text: "
 		_,msg = raw_input().split(" ",1)
 		node.send(msg)
 
