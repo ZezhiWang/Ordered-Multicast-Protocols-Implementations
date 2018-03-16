@@ -19,14 +19,16 @@ class FifoMult:
 		# piggy back S into msg
 		val = {'seq':self.S_fifo, 'msg':msg}
 		# B-multicast
-		self.basic(val)
+		self.__basic(val)
 
 	def recv(self,pid, msg):
 		def helper(sender, seq, msg):
 			# if S = R[q] + 1
+			print self.R_fifo
+			print sender
 			if seq == self.R_fifo[sender] + 1:
 				# Fifo deliever msg
-				self.deliever(sender, msg)
+				self.__deliever(sender, msg)
 				# increment R[q]
 				self.R_fifo[sender] += 1
 			# if S > R[q]
@@ -38,7 +40,7 @@ class FifoMult:
 				sender,seq,msg = val
 				if seq == self.R_fifo[sender] + 1:
 					self.hbQueue.remove(val)
-					self.deliever(sender, msg)
+					self.__deliever(sender, msg)
 					self.R_fifo[sender] += 1
 			# else reject
 			return
@@ -67,7 +69,7 @@ class TotalMult:
 		# piggyback flag
 		val = {'flag': 0, 'R': R_total, 'msg': msg}
 		# basic multicast msg
-		self.basic(val, node)
+		self.__basic(val, node)
 
 	def __seqRecv(self, pid):
 		if pid != self.pid:
@@ -84,7 +86,7 @@ class TotalMult:
 				sender, seqTmp, msg = val
 				if seqTmp == seq:
 					self.hbQueue.remove(val)
-					self.deliever(sender, msg)
+					self.__deliever(sender, msg)
 					self.R_total += 1
 		if pid == '0':
 			self.SeqRecv(pid)
@@ -125,7 +127,7 @@ class CausalMult:
 		# piggy back vector timestamp
 		val = {'vec': V_causal, 'msg':msg}
 		# basic mult
-		self.basic(val, node)
+		self.__basic(val, node)
 	
 	def recv(self, pid, msg):
 		def helper(sender, vec, val):
@@ -140,7 +142,7 @@ class CausalMult:
 						if vec[idx] > self.V_causal[idx]:
 							flag = False
 					if flag:
-						self.deliever(sender, msg)
+						self.__deliever(sender, msg)
 		vec, val = msg['vec'], msg['msg']
 		helper(pid, vec, val)
 
@@ -158,7 +160,7 @@ def Main():
 	# delayRange
 	delay_range = 5
 	
-	node = mults[order](pid, maxServer, delay_range)
+	node = mults[int(order)](pid, int(maxServer), delay_range)
 	
 	while True:
 		_,msg = raw_input().split(" ",1)

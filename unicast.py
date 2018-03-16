@@ -69,7 +69,7 @@ class Unicast:
 
 			ip, port = str(address[0]), int(address[1])
 			pid, message = conn.recv(1024).split(",", 1)
-			data_received = pickle.load(message)
+			data_received = pickle.loads(message)
 			strategy(pid, data_received)
 			conn.close()
 
@@ -85,7 +85,8 @@ class Unicast:
 		send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		pid = sys.argv[1]
 
-		print "Sent " + message + " to process "+ destination + " with system time: " + str(time.time())
+		print "Sent ", message
+		print " to process "+ destination + " with system time: " + str(time.time())
 		time.sleep(delay_time)
 		#get the ip address and port number of config file
 		host, port = self.config_map[destination]
