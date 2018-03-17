@@ -11,14 +11,18 @@ class FifoMult:
 			self.node.unicast_send(idx, msg)
 
 	def __deliever(self, sender, msg):
-		print "Receive from %s process %d with time %f" % ( msg, sender, time.time())
+		print "    Receive %s from process %d with time %f" % ( msg, sender, time.time())
+		return msg == 'bye'
+
+	def isUp(self):
+		return self.node.isRunning()
 
 	def send(self, msg):
 		# increment S by 1
 		self.S_fifo += 1
 		# piggy back S into msg
 		val = {'seq':self.S_fifo, 'msg':msg}
-		# B-multicast
+		# basic multicast msg
 		self.__basic(val)
 
 	def recv(self,pid, msg):
@@ -26,7 +30,7 @@ class FifoMult:
 			# if S = R[q] + 1
 			if seq == self.R_fifo[sender] + 1:
 				# Fifo deliever msg
-				self.__deliever(sender, msg)
+				res = self.__deliever(sender, msg)
 				# increment R[q]
 				self.R_fifo[sender] += 1
 			# if S > R[q]
@@ -38,14 +42,16 @@ class FifoMult:
 				sender,seq,msg = val
 				if seq == self.R_fifo[sender] + 1:
 					self.hbQueue.remove(val)
-					self.__deliever(sender, msg)
+					res = self.__deliever(sender, msg)
 					self.R_fifo[sender] += 1
 			# else reject
-			return
+			return res
 		seq, val = msg['seq'], msg['msg']
-		helper(int(pid), seq, val)
+		return helper(int(pid), seq, val)
 
 	def __init__(self, pid, maxServer, delay_range):
+		# self pid
+		self.pid = pid
 		# num of msg cur server has sent to group
 		self.S_fifo = 0
 		# seq num of latest group msg cur server has delievered from other server
@@ -62,7 +68,11 @@ class TotalMult:
 			self.node.unicast_send(idx, msg)
 
 	def __deliever(self, sender, msg):
-		print sender, time.time(), msg
+		print "Receive %s from process %d with time %f" % ( msg, sender, time.time())
+		return msg == 'bye'
+
+	def isUp(self):
+		return self.node.isRunning()
 
 	def send(self, msg):
 		# piggyback flag
@@ -85,21 +95,26 @@ class TotalMult:
 				sender, seqTmp, msg = val
 				if seqTmp == seq:
 					self.hbQueue.remove(val)
-					self.__deliever(sender, msg)
+					res = self.__deliever(sender, msg)
 					self.R_total += 1
+			return res
 		if pid == '0':
 			self.__seqRecv(pid)
 		else:
 			# split senderID and seq and msg from val
 			flag = msg['flag']
+			# if sequencer
 			if flag == 0:
 				seq, val = msg['R'], msg['msg']
+				# add msg to hold-back queue
 				self.hbQueue.append((pid, seq, val))
 			else:
 				seq, pid = msg['S'], msg['pid']
-				helper(seq, pid)
+				return helper(seq, pid)
 
 	def __init__(self, pid, maxServer, delay_range):
+		# self pid
+		self.pid = pid
 		# hold-back queue
 		self.hbQueue = []
 		if int(pid) == 0:
@@ -119,14 +134,18 @@ class CausalMult:
 			self.node.unicast_send(idx, msg)
 
 	def __deliever(self, sender, msg):
-		print "Receive from %s process %d with time %f" % ( msg[2], sender, time.time())
+		print "Receive %s from process %d with time %f" % ( msg, sender, time.time())
+		return msg == 'bye'
+
+	def isUp(self):
+		return self.node.isRunning()
 
 	def send(self,msg):
 		# increment V[i] by 1
-		self.V_causal[self.pid] += 1
+		self.V_causal[int(self.pid)] += 1
 		# piggy back vector timestamp
 		val = {'vec': self.V_causal, 'msg':msg}
-		# basic mult
+		# basic multicast msg
 		self.__basic(val)
 	
 	def recv(self, pid, msg):
@@ -137,6 +156,7 @@ class CausalMult:
 			# loop through queue
 			#print "received ", vec
 			#print "Us: ", self.V_causal
+			res = False
 			for val in self.hbQueue:
 				sender, vec, msg = val
 				if vec[sender] == self.V_causal[sender] + 1 or sender == self.pid: #make sure deliver myself
@@ -145,19 +165,21 @@ class CausalMult:
 						if vec[idx] > self.V_causal[idx] and idx != sender:
 							flag = False
 					if flag:
-						self.__deliever(sender, val)
+						res = self.__deliever(sender, msg)
 						self.hbQueue.remove(val)
 						for idx in xrange(len(config_map.keys())):
 							if idx != self.pid:
 								self.V_causal[idx] = max(self.V_causal[idx], vec[idx])
+			return res
 			#print"after: ", self.V_causal
 		vec, val = msg['vec'], msg['msg']
-		helper(int(pid), vec, val)
+		return helper(int(pid), vec, val)
 
 	def __init__(self, pid, maxServer, delay_range):
 		# hold-back queue
 		self.hbQueue = []
-		self.pid = int(pid)
+		# seld id
+		self.pid = pid
 		# vector timestamp init
 		self.V_causal = [0 for idx in config_map.keys()]
 		self.maxServer = maxServer
@@ -166,7 +188,6 @@ class CausalMult:
 
 
 mults = [FifoMult, TotalMult, CausalMult]
-
 
 def Main():
 	pid, order, maxServer = sys.argv[1:4]
@@ -177,8 +198,10 @@ def Main():
 	
 	node = mults[int(order)](pid, int(maxServer), delay_range)	
 	while True:
-		print "Enter your text: "
-		_,msg = raw_input().split(" ",1)
+		userInput = raw_input()
+		if not node.isUp():
+			break
+		_,msg = userInput.split(" ",1)
 		node.send(msg)
 
 if __name__ == "__main__":
