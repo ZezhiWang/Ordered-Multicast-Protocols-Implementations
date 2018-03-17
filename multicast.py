@@ -25,7 +25,7 @@ class FifoMult:
 		# basic multicast msg
 		self.__basic(val)
 
-	def recv(self,pid, msg):
+	def recv(self, pid, msg):
 		def helper(sender, seq, msg):
 			res = False
 			# if S = R[q] + 1
@@ -83,6 +83,7 @@ class TotalMult:
 		self.__basic(val)
 
 	def __seqRecv(self, pid):
+		print "Sequencer received msg from", pid
 		if pid != self.pid:
 			# construct msg
 			msg = {'flag':1, 'S': self.S_total, 'pid':pid}
@@ -103,7 +104,7 @@ class TotalMult:
 							return True
 						self.R_total = seqTmp + 1
 			return False
-		if pid == '0':
+		if self.pid == '0':
 			self.__seqRecv(pid)
 		else:
 			# split senderID and seq and msg from val
@@ -133,7 +134,6 @@ class TotalMult:
 		# init unicast client
 		self.maxServer = maxServer
 		self.node = unicast.Unicast(pid, int(maxServer), delay_range, self.recv)
-
 
 class CausalMult:
 	def __basic(self, msg):
@@ -192,7 +192,6 @@ class CausalMult:
 		self.maxServer = maxServer
 		# init unicast client
 		self.node = unicast.Unicast(pid, maxServer, delay_range, self.recv)
-
 
 mults = [FifoMult, TotalMult, CausalMult]
 
