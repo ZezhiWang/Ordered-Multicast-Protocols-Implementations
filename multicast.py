@@ -25,8 +25,9 @@ class FifoMult:
 		# basic multicast msg
 		self.__basic(val)
 
-	def recv(self,pid, msg):
+	def recv(self, pid, msg):
 		def helper(sender, seq, msg):
+			res = False
 			# if S = R[q] + 1
 			if seq == self.R_fifo[sender] + 1:
 				# Fifo deliever msg
@@ -38,12 +39,13 @@ class FifoMult:
 				# put msg in hold-back queue
 				self.hbQueue.append((sender,seq,msg))
 			# check msg in hold-back queue
-			for val in self.hbQueue:
-				sender,seq,msg = val
-				if seq == self.R_fifo[sender] + 1:
-					self.hbQueue.remove(val)
-					res = self.__deliever(sender, msg)
-					self.R_fifo[sender] += 1
+			for i in xrange(len(self.hbQueue)):				
+				for val in self.hbQueue:
+					sender,seq,msg = val
+					if seq == self.R_fifo[sender] + 1:
+						self.hbQueue.remove(val)
+						res = self.__deliever(sender, msg)
+						self.R_fifo[sender] += 1
 			# else reject
 			return res
 		seq, val = msg['seq'], msg['msg']
@@ -68,7 +70,7 @@ class TotalMult:
 			self.node.unicast_send(idx, msg)
 
 	def __deliever(self, sender, msg):
-		print "Receive %s from process %d with time %f" % ( msg, sender, time.time())
+		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
 		return msg == 'bye'
 
 	def isUp(self):
@@ -81,9 +83,10 @@ class TotalMult:
 		self.__basic(val)
 
 	def __seqRecv(self, pid):
+		print "Sequencer received msg from", pid
 		if pid != self.pid:
 			# construct msg
-			msg = {'flag':1, 'S': self.S_total, 'pid':pid}
+			msg = {'flag':1, 'S': self.S_total, 'pid':pid, 'msg': "fk"}
 			# basic multicast msg
 			self.__basic(msg)
 			# increment S_Total
@@ -91,14 +94,17 @@ class TotalMult:
 
 	def recv(self, pid, msg):
 		def helper(seq, pid):
-			for val in self.hbQueue:
-				sender, seqTmp, msg = val
-				if seqTmp == seq:
-					self.hbQueue.remove(val)
-					res = self.__deliever(sender, msg)
-					self.R_total += 1
-			return res
-		if pid == '0':
+			# wait until S = r in hbQueue
+			for i in xrange(len(self.hbQueue)):
+				for val in self.hbQueue:
+					sender, seqTmp, msg = val
+					if seqTmp == self.R_total:
+						self.hbQueue.remove(val)
+						if self.__deliever(sender, msg):
+							return True
+						self.R_total = seqTmp + 1
+			return False
+		if self.pid == '0':
 			self.__seqRecv(pid)
 		else:
 			# split senderID and seq and msg from val
@@ -110,7 +116,9 @@ class TotalMult:
 				self.hbQueue.append((pid, seq, val))
 			else:
 				seq, pid = msg['S'], msg['pid']
-				return helper(seq, pid)
+				if helper(seq, pid):
+					return True
+		return False
 
 	def __init__(self, pid, maxServer, delay_range):
 		# self pid
@@ -126,7 +134,6 @@ class TotalMult:
 		# init unicast client
 		self.maxServer = maxServer
 		self.node = unicast.Unicast(pid, int(maxServer), delay_range, self.recv)
-
 
 class CausalMult:
 	def __basic(self, msg):
@@ -193,7 +200,6 @@ class CausalMult:
 		self.maxServer = maxServer
 		# init unicast client
 		self.node = unicast.Unicast(pid, maxServer, delay_range, self.recv)
-
 
 mults = [FifoMult, TotalMult, CausalMult]
 
