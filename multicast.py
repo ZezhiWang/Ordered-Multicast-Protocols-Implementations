@@ -67,7 +67,7 @@ class TotalMult:
 		# piggyback flag
 		val = {'flag': 0, 'R': R_total, 'msg': msg}
 		# basic multicast msg
-		self.__basic(val, node)
+		self.__basic(val)
 
 	def __seqRecv(self, pid):
 		if pid != self.pid:
@@ -87,20 +87,23 @@ class TotalMult:
 					self.__deliever(sender, msg)
 					self.R_total += 1
 		if pid == '0':
-			self.SeqRecv(pid)
+			self.__seqRecv(pid)
 		else:
 			# split senderID and seq and msg from val
 			flag = msg['flag']
+			# if sequencer
 			if flag == 0:
 				seq, val = msg['R'], msg['msg']
-				hbQueue.append((pid, seq, val))
+				# add msg to hold-back queue
+				self.hbQueue.append((pid, seq, val))
+			# if member
 			else:
 				seq, pid = msg['S'], msg['pid']
 				helper(seq, pid)
 
 	def __init__(self, pid, maxServer, delay_range):
 		# hold-back queue
-		hbQueue = []
+		self.hbQueue = []
 		if int(pid) == 0:
 			# init sequencer
 			self.S_total = 0
@@ -121,7 +124,7 @@ class CausalMult:
 
 	def send(self,msg):
 		# increment V[i] by 1
-		self.V_causal[self.pid] += 1
+		self.V_causal[int(self.pid)] += 1
 		# piggy back vector timestamp
 		val = {'vec': self.V_causal, 'msg':msg}
 		# basic mult
@@ -147,7 +150,8 @@ class CausalMult:
 	def __init__(self, pid, maxServer, delay_range):
 		# hold-back queue
 		self.hbQueue = []
-		self.pid = int(pid)
+		# seld id
+		self.pid = pid
 		# vector timestamp init
 		self.V_causal = [0 for idx in config_map.keys()]
 		# init unicast client
