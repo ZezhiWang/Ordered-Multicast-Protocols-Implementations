@@ -27,6 +27,7 @@ class FifoMult:
 
 	def recv(self,pid, msg):
 		def helper(sender, seq, msg):
+			res = False
 			# if S = R[q] + 1
 			if seq == self.R_fifo[sender] + 1:
 				# Fifo deliever msg
@@ -38,12 +39,13 @@ class FifoMult:
 				# put msg in hold-back queue
 				self.hbQueue.append((sender,seq,msg))
 			# check msg in hold-back queue
-			for val in self.hbQueue:
-				sender,seq,msg = val
-				if seq == self.R_fifo[sender] + 1:
-					self.hbQueue.remove(val)
-					res = self.__deliever(sender, msg)
-					self.R_fifo[sender] += 1
+			for i in range(len(self.hbQueue)):
+				for val in self.hbQueue:
+					sender,seq,msg = val
+					if seq == self.R_fifo[sender] + 1:
+						self.hbQueue.remove(val)
+						res = self.__deliever(sender, msg)
+						self.R_fifo[sender] += 1
 			# else reject
 			return res
 		seq, val = msg['seq'], msg['msg']
