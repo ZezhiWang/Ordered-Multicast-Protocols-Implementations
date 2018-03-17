@@ -27,6 +27,7 @@ class FifoMult:
 
 	def recv(self,pid, msg):
 		def helper(sender, seq, msg):
+			res = False
 			# if S = R[q] + 1
 			if seq == self.R_fifo[sender] + 1:
 				# Fifo deliever msg
