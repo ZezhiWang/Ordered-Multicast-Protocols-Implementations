@@ -78,32 +78,35 @@ class TotalMult:
 
 	def send(self, msg):
 		# piggyback flag
-		val = {'flag': 0, 'R': self.R_total, 'msg': msg}
+		val = {'flag': 0, 'I': self.S_total, 'msg': msg}
+		# increment R_total
+		self.S_total += 1
 		# basic multicast msg
 		self.__basic(val)
 
 	def __seqRecv(self, pid, data):
-		print "    Sequencer received msg from", pid
+		print "Sequencer received msg from", pid
 		if pid != self.pid:
 			# construct msg
-			msg = {'flag':1, 'S': self.S_total, 'pid':pid, 'msg': "fk", 'R':data['R']}
+			msg = {'flag':1, 'S': self.S_total, 'pid':pid, 'msg': "fk", 'I':data['I']}
 			# basic multicast msg
 			self.__basic(msg)
 			# increment S_Total
 			self.S_total += 1
 
 	def recv(self, pid, msg):
-		def helper(seq, pid, R):
+		def helper():
 			# wait until S = r in hbQueue
-			for i in xrange(self.R_total, seq+1):
+			for data in self.seqs:
+				seq, pid, I = data
 				for val in self.hbQueue:
-					sender, seqTmp, msg = val
-					if seqTmp == R and sender == pid and i == self.R_total:
+					sender, idx, msg = val
+					if idx == I and sender == pid and seq == self.R_total:
 						self.hbQueue.remove(val)
-						res = self.__deliever(sender, msg)
-						if res:
+						self.seqs.remove(data)
+						if self.__deliever(sender, msg):
 							return True
-						self.R_total = i + 1
+						self.R_total = seq + 1
 			return False
 		if self.pid == '0':
 			self.__seqRecv(pid, msg)
@@ -112,12 +115,13 @@ class TotalMult:
 			flag = msg['flag']
 			# if not from sequencer
 			if flag == 0:
-				seq, val = msg['R'], msg['msg']
+				idx, val = msg['I'], msg['msg']
 				# add msg to hold-back queue
-				self.hbQueue.append((pid, seq, val))
+				self.hbQueue.append((pid, idx, val))
 			else:
-				seq, pid, R = msg['S'], msg['pid'], msg['R']
-				return helper(seq, pid, R)
+				seq, pid, I = msg['S'], msg['pid'], msg['I']
+				self.seqs.append((seq, pid, I))
+			helper()
 		return False
 
 	def __init__(self, pid, maxServer, delay_range):
@@ -125,10 +129,10 @@ class TotalMult:
 		self.pid = pid
 		# hold-back queue
 		self.hbQueue = []
-		if int(pid) == 0:
-			# init sequencer
-			self.S_total = 0
-		else:
+		# hold-back queue for sequencer
+		self.seqs = []
+		self.S_total = 0
+		if int(pid) != 0:
 			# init group member
 			self.R_total = 0
 		# init unicast client
