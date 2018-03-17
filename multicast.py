@@ -130,6 +130,7 @@ class CausalMult:
 		self.__basic(val)
 	
 	def recv(self, pid, msg):
+		print "received a packet"
 		def helper(sender, vec, val):
 			# place val in hold-back queue
 			self.hbQueue.append((sender, vec, val))
@@ -170,7 +171,7 @@ mults = [FifoMult, TotalMult, CausalMult]
 def Main():
 	pid, order, maxServer = sys.argv[1:4]
 	# delayRange
-	delay_range = [2, 5]
+	delay_range = unicast.delay_range
 
 	print "<<<<<<< chat room >>>>>>>>"
 	

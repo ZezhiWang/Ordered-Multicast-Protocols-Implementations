@@ -9,7 +9,6 @@ import pickle
 #config map  str(id) -> str(ip), int(port)
 #config inv   str(ip), int -> str(id_
 def parse_config(filename):
-	config = open(filename, "r")
 	tmpMap, tmpInv = {}, {}
 	with open(filename, "r") as config:
 		lines = config.read().splitlines()
@@ -38,7 +37,7 @@ class Unicast:
 		strategy(func): the stragey for order. Default unicaste_received
 	'''
 
-	def unicast_receive(self, source, message):
+	def unicast_receive(source, message):
 		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
 
 	def __init__(self, pid, max_number, delay_range, strategy=unicast_receive, config_map = config_map, config_inv = config_inv, ):
@@ -73,7 +72,6 @@ class Unicast:
 			strategy(pid, data_received)
 			conn.close()
 
-
 	def unicast_send(self, destination, message):
 		#minTime, maxTime = config_map
 
@@ -85,7 +83,7 @@ class Unicast:
 		send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		pid = sys.argv[1]
 
-		print "Sent " + message['msg'] + " to process "+ destination + " with system time: " + str(time.time())
+		#print "Sent ", message, " to process "+ destination + " with system time: " + str(time.time())
 		time.sleep(delay_time)
 		#get the ip address and port number of config file
 		host, port = self.config_map[destination]
@@ -96,7 +94,6 @@ class Unicast:
 		data = pickle.dumps(message)
 		send_socket.send(pid + "," + data)
 		send_socket.close()
-
 
 	def unicast_receive(self, source, message):
 		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
