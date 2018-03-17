@@ -70,7 +70,7 @@ class TotalMult:
 			self.node.unicast_send(idx, msg)
 
 	def __deliever(self, sender, msg):
-		print "Receive %s from process %d with time %f" % ( msg, sender, time.time())
+		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
 		return msg == 'bye'
 
 	def isUp(self):
@@ -86,7 +86,7 @@ class TotalMult:
 		print "Sequencer received msg from", pid
 		if pid != self.pid:
 			# construct msg
-			msg = {'flag':1, 'S': self.S_total, 'pid':pid}
+			msg = {'flag':1, 'S': self.S_total, 'pid':pid, 'msg': "fk"}
 			# basic multicast msg
 			self.__basic(msg)
 			# increment S_Total
