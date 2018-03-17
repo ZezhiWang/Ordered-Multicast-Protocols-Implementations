@@ -157,19 +157,27 @@ class CausalMult:
 			#print "received ", vec
 			#print "Us: ", self.V_causal
 			res = False
-			for val in self.hbQueue:
-				sender, vec, msg = val
-				if vec[sender] == self.V_causal[sender] + 1 or sender == self.pid: #make sure deliver myself
-					flag = True
-					for idx in xrange(len(config_map.keys())):
-						if vec[idx] > self.V_causal[idx] and idx != sender:
-							flag = False
-					if flag:
-						res = self.__deliever(sender, msg)
-						self.hbQueue.remove(val)
+			#print vec
+			#print self.V_causal
+			for i in range(len(self.hbQueue)):
+				for val in self.hbQueue:
+					sender, vec, msg = val
+					if vec[sender] == self.V_causal[sender] + 1 or sender == int(self.pid): #make sure deliver myself
+						flag = True
 						for idx in xrange(len(config_map.keys())):
-							if idx != self.pid:
-								self.V_causal[idx] = max(self.V_causal[idx], vec[idx])
+							if idx == int(self.pid) or idx == sender: 
+								continue
+							if vec[idx] > self.V_causal[idx]:
+								flag = False
+						#print flag
+						if flag:
+							res = self.__deliever(sender, msg)
+							self.hbQueue.remove(val)
+							if sender != int(self.pid):
+								self.V_causal[sender] +=1
+							#for idx in xrange(len(config_map.keys())):
+								#if idx != int(self.pid):
+									#self.V_causal[idx] = max(self.V_causal[idx], vec[idx])
 			return res
 			#print"after: ", self.V_causal
 		vec, val = msg['vec'], msg['msg']
