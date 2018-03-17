@@ -82,42 +82,42 @@ class TotalMult:
 		# basic multicast msg
 		self.__basic(val)
 
-	def __seqRecv(self, pid):
-		print "Sequencer received msg from", pid
+	def __seqRecv(self, pid, data):
+		print "    Sequencer received msg from", pid
 		if pid != self.pid:
 			# construct msg
-			msg = {'flag':1, 'S': self.S_total, 'pid':pid, 'msg': "fk"}
+			msg = {'flag':1, 'S': self.S_total, 'pid':pid, 'msg': "fk", 'R':data['R']}
 			# basic multicast msg
 			self.__basic(msg)
 			# increment S_Total
 			self.S_total += 1
 
 	def recv(self, pid, msg):
-		def helper(seq, pid):
+		def helper(seq, pid, R):
 			# wait until S = r in hbQueue
-			for i in xrange(len(self.hbQueue)):
+			for i in xrange(self.R_total, seq+1):
 				for val in self.hbQueue:
 					sender, seqTmp, msg = val
-					if seqTmp == self.R_total:
+					if seqTmp == R and sender == pid and i == self.R_total:
 						self.hbQueue.remove(val)
-						if self.__deliever(sender, msg):
+						res = self.__deliever(sender, msg)
+						if res:
 							return True
-						self.R_total = seqTmp + 1
+						self.R_total = i + 1
 			return False
 		if self.pid == '0':
-			self.__seqRecv(pid)
+			self.__seqRecv(pid, msg)
 		else:
 			# split senderID and seq and msg from val
 			flag = msg['flag']
-			# if sequencer
+			# if not from sequencer
 			if flag == 0:
 				seq, val = msg['R'], msg['msg']
 				# add msg to hold-back queue
 				self.hbQueue.append((pid, seq, val))
 			else:
-				seq, pid = msg['S'], msg['pid']
-				if helper(seq, pid):
-					return True
+				seq, pid, R = msg['S'], msg['pid'], msg['R']
+				return helper(seq, pid, R)
 		return False
 
 	def __init__(self, pid, maxServer, delay_range):
