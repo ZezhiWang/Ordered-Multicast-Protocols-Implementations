@@ -38,12 +38,13 @@ class FifoMult:
 				# put msg in hold-back queue
 				self.hbQueue.append((sender,seq,msg))
 			# check msg in hold-back queue
-			for val in self.hbQueue:
-				sender,seq,msg = val
-				if seq == self.R_fifo[sender] + 1:
-					self.hbQueue.remove(val)
-					res = self.__deliever(sender, msg)
-					self.R_fifo[sender] += 1
+			for tmp in self.hbQueue:				
+				for val in self.hbQueue:
+					sender,seq,msg = val
+					if seq == self.R_fifo[sender] + 1:
+						self.hbQueue.remove(val)
+						res = self.__deliever(sender, msg)
+						self.R_fifo[sender] += 1
 			# else reject
 			return res
 		seq, val = msg['seq'], msg['msg']
