@@ -38,7 +38,7 @@ class FifoMult:
 				# put msg in hold-back queue
 				self.hbQueue.append((sender,seq,msg))
 			# check msg in hold-back queue
-			for tmp in self.hbQueue:				
+			for i in xrange(len(self.hbQueue)):				
 				for val in self.hbQueue:
 					sender,seq,msg = val
 					if seq == self.R_fifo[sender] + 1:
@@ -92,13 +92,16 @@ class TotalMult:
 
 	def recv(self, pid, msg):
 		def helper(seq, pid):
-			for val in self.hbQueue:
-				sender, seqTmp, msg = val
-				if seqTmp == seq:
-					self.hbQueue.remove(val)
-					res = self.__deliever(sender, msg)
-					self.R_total += 1
-			return res
+			# wait until S = r in hbQueue
+			for i in xrange(len(self.hbQueue)):
+				for val in self.hbQueue:
+					sender, seqTmp, msg = val
+					if seqTmp == self.R_total:
+						self.hbQueue.remove(val)
+						if self.__deliever(sender, msg):
+							return True
+						self.R_total = seqTmp + 1
+			return False
 		if pid == '0':
 			self.__seqRecv(pid)
 		else:
@@ -111,7 +114,9 @@ class TotalMult:
 				self.hbQueue.append((pid, seq, val))
 			else:
 				seq, pid = msg['S'], msg['pid']
-				return helper(seq, pid)
+				if helper(seq, pid):
+					return True
+		return False
 
 	def __init__(self, pid, maxServer, delay_range):
 		# self pid
