@@ -92,7 +92,6 @@ class Unicast:
 		pid = sys.argv[1]
 
 		print "    Sent " + message['msg'] + " to process "+ destination + " with system time: " + str(time.time())
-		time.sleep(delay_time)
 		#get the ip address and port number of config file
 		host, port = self.config_map[destination]
 		#connect to host/port
@@ -100,6 +99,7 @@ class Unicast:
 		#send the message
 		#msg = [1, 2, 3]
 		data = pickle.dumps(message)
+		time.sleep(delay_time)
 		send_socket.send(pid + "," + data)
 		send_socket.close()
 
