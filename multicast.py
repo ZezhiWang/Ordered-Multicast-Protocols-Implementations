@@ -1,3 +1,12 @@
+'''
+	Implementation of FIFO, TOTAL, CASUAL ordering in mulitcast
+	FIFO: vector logical time
+	TOTAL: sequencer coordination
+	CASUAL: vector timestamp
+	
+	Authors: Zezhi (Harry) Wang, Yajie (Angus) Zhao, Shikun (Jason) Wang
+	Date: Mar 17, 2018
+'''
 import unicast
 import time
 import sys

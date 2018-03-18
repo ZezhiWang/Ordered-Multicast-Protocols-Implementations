@@ -1,5 +1,8 @@
-'''Implementation of unicast functionalities with TCP
-	Author: Zezhi (Harry) Wang, Yajie (Angus) Zhao, Shikun (Jason) Wang
+'''
+	Implementation of unicast functionalities with TCP
+	
+	Authors: Zezhi (Harry) Wang, Yajie (Angus) Zhao, Shikun (Jason) Wang
+	Date: Mar 17, 2018
 ''' 
 import socket #socket programming
 import sys
@@ -9,8 +12,6 @@ import time
 from random import *
 import pickle	#data serialization
 
-#config map  str(id) -> str(ip), int(port)
-#config inv   str(ip), int -> str(id_
 def parse_config(filename):
 	'''parse configuration file to a hash map
 
@@ -35,9 +36,20 @@ def parse_config(filename):
 		tmpInv[(lineList[1], int(lineList[2]))] = lineList[0]
 	return minTime, maxTime, tmpMap, tmpInv
 
-#testing
-#delay_range = [0,0]
-#delay_range[0], delay_range[1], config_map, config_inv = parse_config("config.txt")
+#initial delay range and config map
+delay_range = [0,0]
+delay_range[0], delay_range[1], config_map, config_inv = parse_config("config.txt")
+
+#use for testing unicast_rec
+def unicast_rec(self, source, message):
+		'''unicast deliver, and print out the message
+
+		Args:
+			source(str): deliver message sent from source
+			message(str): message that needs to be deliver
+		'''
+		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
+		return message == 'bye'
 
 class Unicast:
 	'''
@@ -49,7 +61,8 @@ class Unicast:
 		delay_range(list): [0] is min delay, [1] is max delay
 		strategy(func): the stragey for order. Default unicaste_received
 	'''
-	def __init__(self, pid, max_number, delay_range, strategy=unicast_receive, config_map = config_map, config_inv = config_inv, ):
+
+	def __init__(self, pid, max_number, delay_range, strategy=unicast_rec, config_map = config_map, config_inv = config_inv, ):
 		'''
 		Initialization of the object
 
@@ -73,7 +86,6 @@ class Unicast:
 		'''detect if the node is running'''
 		return self.running
 
-
 	def unicast_receive(self, source, message):
 		'''unicast deliver, and print out the message
 
@@ -83,6 +95,7 @@ class Unicast:
 		'''
 		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
 		return message == 'bye'
+
 
 	def socket_listen_thread(self, strategy):
 		'''Put each running nodes constanting waiting for others message
@@ -153,7 +166,7 @@ class Unicast:
 		send_socket.close() # closed the socket when finish
 
 
-#testing 
+#testing unicast  
 def main():
 	pid = sys.argv[1]
 	unicast_node = Unicast(pid, 5, delay_range)	
