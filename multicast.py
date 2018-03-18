@@ -200,7 +200,7 @@ class CausalMult:
 					if vec[sender] == self.V_causal[sender] + 1 or sender == int(self.pid): #make sure deliver myself
 						flag = True
 						for idx in xrange(self.maxServer):
-							# if vec is newest
+							# if vec is newest (check all the slots except itself and the sender)
 							if vec[idx] > self.V_causal[idx] and not (idx == int(self.pid) or idx == sender):
 								flag = False
 								break
@@ -233,7 +233,6 @@ mults = [FifoMult, TotalMult, CausalMult]
 def Main():
 	# get usr input for pid, order, maxServer
 	pid, order, maxServer = sys.argv[1:4]
-	# delayRange
 	delay_range = unicast.delay_range
 
 	print "<<<<<<< chat room >>>>>>>>"
