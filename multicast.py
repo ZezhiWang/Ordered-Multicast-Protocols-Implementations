@@ -122,6 +122,8 @@ class TotalMult:
 				seq, pid, I = msg['S'], msg['pid'], msg['I']
 				self.seqs.append((seq, pid, I))
 			helper()
+		print self.hbQueue
+		print self.seqs
 		return False
 
 	def __init__(self, pid, maxServer, delay_range):
@@ -165,32 +167,23 @@ class CausalMult:
 			# place val in hold-back queue
 			self.hbQueue.append((sender, vec, val))
 			# loop through queue
-			#print "received ", vec
-			#print "Us: ", self.V_causal
 			res = False
-			#print vec
-			#print self.V_causal
 			for i in range(len(self.hbQueue)):
 				for val in self.hbQueue:
 					sender, vec, msg = val
 					if vec[sender] == self.V_causal[sender] + 1 or sender == int(self.pid): #make sure deliver myself
 						flag = True
 						for idx in xrange(len(config_map.keys())):
-							if idx == int(self.pid) or idx == sender: 
+							if idx == int(self.pid) or idx == sender: #check all the slots except itself and the sender
 								continue
 							if vec[idx] > self.V_causal[idx]:
 								flag = False
-						#print flag
 						if flag:
 							res = self.__deliever(sender, msg)
 							self.hbQueue.remove(val)
-							if sender != int(self.pid):
+							if sender != int(self.pid):		# update the sender's slot if it's not itself
 								self.V_causal[sender] +=1
-							#for idx in xrange(len(config_map.keys())):
-								#if idx != int(self.pid):
-									#self.V_causal[idx] = max(self.V_causal[idx], vec[idx])
 			return res
-			#print"after: ", self.V_causal
 		vec, val = msg['vec'], msg['msg']
 		return helper(int(pid), vec, val)
 
@@ -209,7 +202,6 @@ mults = [FifoMult, TotalMult, CausalMult]
 
 def Main():
 	pid, order, maxServer = sys.argv[1:4]
-	# delayRange
 	delay_range = unicast.delay_range
 
 	print "<<<<<<< chat room >>>>>>>>"
