@@ -6,17 +6,21 @@ from threading import Thread
 config_map = unicast.config_map
 
 class FifoMult:
+	# basic multicast (str msg)
 	def __basic(self, msg):
 		for idx in config_map.keys():
 			self.node.unicast_send(idx, msg)
 
+	# deliever msg (str sender, str msg)
 	def __deliever(self, sender, msg):
-		print "    Receive %s from process %d with time %f" % ( msg, sender, time.time())
+		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
 		return msg == 'bye'
 
+	# bool, if current node is still listening
 	def isUp(self):
 		return self.node.isRunning()
 
+	# fifo multicast msg (str msg)
 	def send(self, msg):
 		# increment S by 1
 		self.S_fifo += 1
@@ -25,7 +29,9 @@ class FifoMult:
 		# basic multicast msg
 		self.__basic(val)
 
+	# handle received msg (str pid, dict msg)
 	def recv(self, pid, msg):
+		# helper func (str sender, int seq, str msg)
 		def helper(sender, seq, msg):
 			res = False
 			# if S = R[q] + 1
@@ -42,15 +48,21 @@ class FifoMult:
 			for i in xrange(len(self.hbQueue)):				
 				for val in self.hbQueue:
 					sender,seq,msg = val
+					# if s = r[pid] + 1
 					if seq == self.R_fifo[sender] + 1:
+						# remove msg from hold back queue
 						self.hbQueue.remove(val)
+						# deliever msg
 						res = self.__deliever(sender, msg)
+						# increment r[pid] by 1
 						self.R_fifo[sender] += 1
 			# else reject
 			return res
 		seq, val = msg['seq'], msg['msg']
+		# handle msg received
 		return helper(int(pid), seq, val)
 
+	# constructor (str pid, int maxServer, int[] delay_range)
 	def __init__(self, pid, maxServer, delay_range):
 		# self pid
 		self.pid = pid
@@ -65,25 +77,30 @@ class FifoMult:
 		self.hbQueue = []
 
 class TotalMult:
+	# basic multicast (str msg)
 	def __basic(self, msg):
 		for idx in config_map.keys():
 			self.node.unicast_send(idx, msg)
 
+	# deliever msg (int sender, str msg)
 	def __deliever(self, sender, msg):
 		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
 		return msg == 'bye'
 
+	# if current node is still listening
 	def isUp(self):
 		return self.node.isRunning()
 
+	# total multicast msg (str msg)
 	def send(self, msg):
-		# piggyback flag
+		# piggyback flag and local identifier
 		val = {'flag': 0, 'I': self.S_total, 'msg': msg}
 		# increment R_total
 		self.S_total += 1
 		# basic multicast msg
 		self.__basic(val)
 
+	# recv method for sequencer (str pid, dict data)
 	def __seqRecv(self, pid, data):
 		print "Sequencer received msg from", pid
 		if pid != self.pid:
@@ -94,36 +111,42 @@ class TotalMult:
 			# increment S_Total
 			self.S_total += 1
 
+	# handle received msg (str pid, dict msg)
 	def recv(self, pid, msg):
 		def helper():
 			# wait until S = r in hbQueue
-			for data in self.seqs:
-				seq, pid, I = data
-				for val in self.hbQueue:
-					sender, idx, msg = val
-					if idx == I and sender == pid and seq == self.R_total:
-						self.hbQueue.remove(val)
-						self.seqs.remove(data)
-						if self.__deliever(sender, msg):
-							return True
-						self.R_total = seq + 1
+			for i in xrange(len(self.seqs)):
+				for data in self.seqs:
+					seq, pid, I = data
+					for val in self.hbQueue:
+						sender, idx, msg = val
+						# if msg with according sender and identifier is ready to deliever
+						if idx == I and sender == pid and seq == self.R_total:
+							# remove msg from both queues
+							self.hbQueue.remove(val)
+							self.seqs.remove(data)
+							# deliever msg
+							if self.__deliever(sender, msg):
+								return True
+							# increment R_total
+							self.R_total = seq + 1
 			return False
+		# if current node is sequencer
 		if self.pid == '0':
 			self.__seqRecv(pid, msg)
-		else:
-			# split senderID and seq and msg from val
-			flag = msg['flag']
+		else: # current node is not sequencer
 			# if not from sequencer
-			if flag == 0:
-				idx, val = msg['I'], msg['msg']
+			if msg['flag'] == 0:
 				# add msg to hold-back queue
-				self.hbQueue.append((pid, idx, val))
+				self.hbQueue.append((pid, msg['I'], msg['msg']))
 			else:
-				seq, pid, I = msg['S'], msg['pid'], msg['I']
-				self.seqs.append((seq, pid, I))
-			helper()
+				# add sequencer msg to sequencer queue
+				self.seqs.append((msg['S'], msg['pid'], msg['I']))
+			# find matching msg in 2 queues and deliever
+			return helper()
 		return False
 
+	# constructor (str pid, int maxServer, int[] delay_range)
 	def __init__(self, pid, maxServer, delay_range):
 		# self pid
 		self.pid = pid
@@ -131,26 +154,31 @@ class TotalMult:
 		self.hbQueue = []
 		# hold-back queue for sequencer
 		self.seqs = []
+		# init local send counter
 		self.S_total = 0
-		if int(pid) != 0:
-			# init group member
+		if pid != '0': # if not sequencer
+			# init group member recived counter
 			self.R_total = 0
 		# init unicast client
 		self.maxServer = maxServer
 		self.node = unicast.Unicast(pid, int(maxServer), delay_range, self.recv)
 
 class CausalMult:
+	# basic multicast (sre msg)
 	def __basic(self, msg):
 		for idx in config_map.keys():
 			self.node.unicast_send(idx, msg)
 
+	# deliever msg (int sender, str msg)
 	def __deliever(self, sender, msg):
 		print "Receive %s from process %d with time %f" % ( msg, sender, time.time())
 		return msg == 'bye'
 
+	# if current node is still listening
 	def isUp(self):
 		return self.node.isRunning()
 
+	# causal multicast msg (str msg)
 	def send(self,msg):
 		# increment V[i] by 1
 		self.V_causal[int(self.pid)] += 1
@@ -159,67 +187,68 @@ class CausalMult:
 		# basic multicast msg
 		self.__basic(val)
 	
+	# handle received msg (str pid, dict msg)
 	def recv(self, pid, msg):
-		print "received a packet"
+		# helper func (int sender, int[] vec, str val)
 		def helper(sender, vec, val):
 			# place val in hold-back queue
 			self.hbQueue.append((sender, vec, val))
 			# loop through queue
-			#print "received ", vec
-			#print "Us: ", self.V_causal
-			res = False
-			#print vec
-			#print self.V_causal
 			for i in range(len(self.hbQueue)):
 				for val in self.hbQueue:
 					sender, vec, msg = val
 					if vec[sender] == self.V_causal[sender] + 1 or sender == int(self.pid): #make sure deliver myself
 						flag = True
-						for idx in xrange(len(config_map.keys())):
-							if idx == int(self.pid) or idx == sender: 
-								continue
-							if vec[idx] > self.V_causal[idx]:
+						for idx in xrange(self.maxServer):
+							# if vec is newest
+							if vec[idx] > self.V_causal[idx] and not (idx == int(self.pid) or idx == sender):
 								flag = False
-						#print flag
+								break
 						if flag:
-							res = self.__deliever(sender, msg)
+							# deliever msg
+							if self.__deliever(sender, msg):
+								return True
+							# remove msg from hold back queue
 							self.hbQueue.remove(val)
-							if sender != int(self.pid):
-								self.V_causal[sender] +=1
-							#for idx in xrange(len(config_map.keys())):
-								#if idx != int(self.pid):
-									#self.V_causal[idx] = max(self.V_causal[idx], vec[idx])
-			return res
-			#print"after: ", self.V_causal
-		vec, val = msg['vec'], msg['msg']
-		return helper(int(pid), vec, val)
+							# increment v[sender] if sender is not current node 
+							self.V_causal[sender] += 1 if sender != int(self.pid) else 0
+			return False
+		return helper(int(pid), msg['vec'], msg['msg'])
 
+	# constructor (str pid, int maxServer, int[] delay_range)
 	def __init__(self, pid, maxServer, delay_range):
 		# hold-back queue
 		self.hbQueue = []
 		# seld id
 		self.pid = pid
-		# vector timestamp init
-		self.V_causal = [0 for idx in config_map.keys()]
+		# init number of servers
 		self.maxServer = maxServer
+		# vector timestamp init
+		self.V_causal = [0 for idx in xrange(maxServer)]
 		# init unicast client
 		self.node = unicast.Unicast(pid, maxServer, delay_range, self.recv)
 
+# type of multicast nodes
 mults = [FifoMult, TotalMult, CausalMult]
-
 def Main():
+	# get usr input for pid, order, maxServer
 	pid, order, maxServer = sys.argv[1:4]
 	# delayRange
 	delay_range = unicast.delay_range
 
 	print "<<<<<<< chat room >>>>>>>>"
 	
+	# init multicast node
 	node = mults[int(order)](pid, int(maxServer), delay_range)	
 	while True:
+		# take input
 		userInput = raw_input()
 		if not node.isUp():
+			# stop if node is not listening
 			break
+		# get msg
 		_,msg = userInput.split(" ",1)
+		# multicast msg
 		node.send(msg)
 
 if __name__ == "__main__":
