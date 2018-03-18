@@ -1,14 +1,26 @@
-import socket
+'''Implementation of unicast functionalities with TCP
+	Author: Zezhi (Harry) Wang, Yajie (Angus) Zhao, Shikun (Jason) Wang
+''' 
+import socket #socket programming
 import sys
 import traceback
-from threading import Thread
+from threading import Thread #multithreading
 import time
 from random import *
-import pickle
+import pickle	#data serialization
 
 #config map  str(id) -> str(ip), int(port)
 #config inv   str(ip), int -> str(id_
 def parse_config(filename):
+	'''parse configuration file to a hash map
+
+	Args:
+		filename: the name of configuration file
+
+	return:
+		config map: str(id) -> str(ip), int(port)
+		config inv: str(ip), int(port) -> str(id)
+	'''
 	tmpMap, tmpInv = {}, {}
 	with open(filename, "r") as config:
 		lines = config.read().splitlines()
@@ -23,8 +35,9 @@ def parse_config(filename):
 		tmpInv[(lineList[1], int(lineList[2]))] = lineList[0]
 	return minTime, maxTime, tmpMap, tmpInv
 
-delay_range = [0,0]
-delay_range[0], delay_range[1], config_map, config_inv = parse_config("config.txt")
+#testing
+#delay_range = [0,0]
+#delay_range[0], delay_range[1], config_map, config_inv = parse_config("config.txt")
 
 class Unicast:
 	'''
@@ -36,11 +49,6 @@ class Unicast:
 		delay_range(list): [0] is min delay, [1] is max delay
 		strategy(func): the stragey for order. Default unicaste_received
 	'''
-
-	def unicast_receive(source, message):
-		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
-		return message == 'bye'
-
 	def __init__(self, pid, max_number, delay_range, strategy=unicast_receive, config_map = config_map, config_inv = config_inv, ):
 		'''
 		Initialization of the object
@@ -57,57 +65,95 @@ class Unicast:
 		self.config_inv = config_inv
 		self.pid = pid
 		self.running = True
+		#Spawn a thread for listening msg from other nodes
 		Thread(target=self.socket_listen_thread, args=(strategy,)).start()
 
+
 	def isRunning(self):
+		'''detect if the node is running'''
 		return self.running
 
-	#listening from other nodes
-	def socket_listen_thread(self, strategy):
-		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		sock.bind((self.config_map[self.pid][0], self.config_map[self.pid][1]))
-		sock.listen(self.max_nodes)
-		# print "We can now start to chat.."
-		while True:
-			conn, address = sock.accept()
 
+	def unicast_receive(self, source, message):
+		'''unicast deliver, and print out the message
+
+		Args:
+			source(str): deliver message sent from source
+			message(str): message that needs to be deliver
+		'''
+		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
+		return message == 'bye'
+
+	def socket_listen_thread(self, strategy):
+		'''Put each running nodes constanting waiting for others message
+
+		Args:
+			strategy(func): fifo, total, casual ordering
+		'''
+
+		#create a listening socket
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		#bind socket to the corresponding port number and id number
+		sock.bind((self.config_map[self.pid][0], self.config_map[self.pid][1]))
+		#set maximum number of nodes 
+		sock.listen(self.max_nodes)
+
+		#listening
+		while True:
+			#connect with a nodes when receive a request
+			conn, address = sock.accept()
+			#get the ip address and port number of the sender
 			ip, port = str(address[0]), int(address[1])
+			#decode the message received
 			pid, message = conn.recv(1024).split(",", 1)
 			data_received = pickle.loads(message)
+			#use particular ordering the deliver
 			flag = strategy(pid, data_received)
+			#close connection
 			conn.close()
+			#check exit signal
 			if flag:
 				self.running = False
 				break
 
 	def unicast_send(self, destination, message):
-		#minTime, maxTime = config_map
+		''' unicast send implementation with network delay
 
+		Args:
+			destination(str): the id number of the node of destination
+			message(str): message that we want to sent
+		'''
+
+		#get the random number of delay range as our network delay
 		delay_time = uniform(self.delay_range[0], self.delay_range[1])
+		#create a thread to send the message
 		Thread(target=self.delay_send, args=(destination, message, delay_time)).start()
 
 
 	def delay_send(self, destination, message, delay_time):
+		'''function that used to send message with TCP
+
+		Args:
+			destination: id number of the node
+			message: message that we send
+			delay_time: simulated network delay
+
+		'''
+
+		#send message
 		send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		pid = sys.argv[1]
+		pid = sys.argv[1] # get id from user input
 
 		print "    Sent " + message['msg'] + " to process "+ destination + " with system time: " + str(time.time())
-		#get the ip address and port number of config file
 		host, port = self.config_map[destination]
-		#send the message
-		#msg = [1, 2, 3]
-		data = pickle.dumps(message)
-		# simulate delay
-		time.sleep(delay_time)
-		#connect to host/port
-		send_socket.connect((host, port))
+		data = pickle.dumps(message) #serialized the message
+		time.sleep(delay_time) #network delay
+		send_socket.connect((host, port)) #connect to host/port and send
 		send_socket.send(pid + "," + data)
-		send_socket.close()
-
-	def unicast_receive(self, source, message):
-		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
+		send_socket.close() # closed the socket when finish
 
 
+#testing 
 def main():
 	pid = sys.argv[1]
 	unicast_node = Unicast(pid, 5, delay_range)	
