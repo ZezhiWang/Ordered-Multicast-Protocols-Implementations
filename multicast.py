@@ -206,11 +206,22 @@ class CausalMult:
 			for i in range(len(self.hbQueue)):
 				for val in self.hbQueue:
 					sender, vec, msg = val
-					if vec[sender] == self.V_causal[sender] + 1 or sender == int(self.pid): #make sure deliver myself
+
+					# receivce msg from itself
+					if sender == int (self.pid):
+						#deliver the oldest msg
+						if vec[sender] == self.deliver_own + 1:
+							if self.__deliever(sender, msg):
+								return True
+							# remove msg from hold back queue
+							self.hbQueue.remove(val)
+							self.deliver_own +=1
+					# receive msg from others
+					elif vec[sender] == self.V_causal[sender] + 1: #make sure deliver myself
 						flag = True
 						for idx in xrange(self.maxServer):
 							# if vec is newest (check all the slots except itself and the sender)
-							if vec[idx] > self.V_causal[idx] and not (idx == int(self.pid) or idx == sender):
+							if vec[idx] > self.V_causal[idx] and not (idx == sender):
 								flag = False
 								break
 						if flag:
@@ -220,12 +231,14 @@ class CausalMult:
 							# remove msg from hold back queue
 							self.hbQueue.remove(val)
 							# increment v[sender] if sender is not current node 
-							self.V_causal[sender] += 1 if sender != int(self.pid) else 0
+							self.V_causal[sender] += 1
 			return False
 		return helper(int(pid), msg['vec'], msg['msg'])
 
 	# constructor (str pid, int maxServer, int[] delay_range)
 	def __init__(self, pid, maxServer, delay_range):
+		#local clock to keep track of delivering own msg
+		self.deliver_own = 0
 		# hold-back queue
 		self.hbQueue = []
 		# seld id
