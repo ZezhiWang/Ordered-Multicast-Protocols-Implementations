@@ -1,12 +1,11 @@
 '''
 	Implementation of unicast functionalities with TCP
 	
-	Authors: Zezhi (Harry) Wang, Yajie (Angus) Zhao, Shikun (Jason) Wang
+	Authors: Zezhi (Herry) Wang, Yajie (Angus) Zhao, Shikun (Jason) Wang
 	Date: Mar 17, 2018
 ''' 
 import socket #socket programming
 import sys
-import traceback
 from threading import Thread #multithreading
 import time
 from random import *
@@ -28,8 +27,6 @@ def parse_config(filename):
 	line = lines.pop(0).split(" ",1)
 	minTime = int(line[0]) / 1000.0
 	maxTime = int(line[1]) / 1000.0
-	print "test: "
-	print minTime, maxTime
 	for line in lines:
 		lineList = line.split()
 		tmpMap[lineList[0]] = (lineList[1], int(lineList[2]))
@@ -39,17 +36,6 @@ def parse_config(filename):
 #initial delay range and config map
 delay_range = [0,0]
 delay_range[0], delay_range[1], config_map, config_inv = parse_config("config.txt")
-
-#use for testing unicast_rec
-def unicast_rec(self, source, message):
-		'''unicast deliver, and print out the message
-
-		Args:
-			source(str): deliver message sent from source
-			message(str): message that needs to be deliver
-		'''
-		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
-		return message == 'bye'
 
 class Unicast:
 	'''
@@ -61,8 +47,20 @@ class Unicast:
 		delay_range(list): [0] is min delay, [1] is max delay
 		strategy(func): the stragey for order. Default unicaste_received
 	'''
+	def unicast_receive(source, message):
+		'''unicast deliver, and print out the message
 
-	def __init__(self, pid, max_number, delay_range, strategy=unicast_rec, config_map = config_map, config_inv = config_inv, ):
+		Args:
+			source(str): deliver message sent from source
+			message(str): message that needs to be deliver
+		'''
+		if message['msg'] == 'bye':
+			print "Listener stopped, press ENTER to exit."
+			return True
+		print "Received " + message['msg'] + " from process " + source + " with system time is " + str(time.time())
+		return False
+
+	def __init__(self, pid, max_number, delay_range, strategy=unicast_receive, config_map = config_map, config_inv = config_inv):
 		'''
 		Initialization of the object
 
@@ -81,21 +79,9 @@ class Unicast:
 		#Spawn a thread for listening msg from other nodes
 		Thread(target=self.socket_listen_thread, args=(strategy,)).start()
 
-
 	def isRunning(self):
 		'''detect if the node is running'''
 		return self.running
-
-	def unicast_receive(self, source, message):
-		'''unicast deliver, and print out the message
-
-		Args:
-			source(str): deliver message sent from source
-			message(str): message that needs to be deliver
-		'''
-		print "Received " + message + " from process " + source + " with system time is " + str(time.time())
-		return message == 'bye'
-
 
 	def socket_listen_thread(self, strategy):
 		'''Put each running nodes constanting waiting for others message
@@ -103,7 +89,6 @@ class Unicast:
 		Args:
 			strategy(func): fifo, total, casual ordering
 		'''
-
 		#create a listening socket
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		#bind socket to the corresponding port number and id number
@@ -139,8 +124,9 @@ class Unicast:
 
 		#get the random number of delay range as our network delay
 		delay_time = uniform(self.delay_range[0], self.delay_range[1])
+		msg = {'msg': message}
 		#create a thread to send the message
-		Thread(target=self.delay_send, args=(destination, message, delay_time)).start()
+		Thread(target=self.delay_send, args=(destination, msg, delay_time)).start()
 
 
 	def delay_send(self, destination, message, delay_time):
@@ -152,19 +138,15 @@ class Unicast:
 			delay_time: simulated network delay
 
 		'''
-
 		#send message
 		send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		pid = sys.argv[1] # get id from user input
-
 		print "    Sent " + message['msg'] + " to process "+ destination + " with system time: " + str(time.time())
 		host, port = self.config_map[destination]
 		data = pickle.dumps(message) #serialized the message
 		time.sleep(delay_time) #network delay
 		send_socket.connect((host, port)) #connect to host/port and send
-		send_socket.send(pid + "," + data)
+		send_socket.send(self.pid + "," + data)
 		send_socket.close() # closed the socket when finish
-
 
 #testing unicast  
 def main():
@@ -172,11 +154,10 @@ def main():
 	unicast_node = Unicast(pid, 5, delay_range)	
 	while True:
 		user_input = raw_input()
-		if (user_input == 'bye'):
+		if not unicast_node.isRunning():
 			break
-		command, dest, message = user_input.split(" ", 2)
-		if command == "send":
-			unicast_node.unicast_send(dest, message)
+		_, dest, message = user_input.split(" ", 2)
+		unicast_node.unicast_send(dest, message)
 
 if __name__ == "__main__":
 	main()

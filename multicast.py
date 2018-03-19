@@ -4,7 +4,7 @@
 	TOTAL: sequencer coordination
 	CASUAL: vector timestamp
 	
-	Authors: Zezhi (Harry) Wang, Yajie (Angus) Zhao, Shikun (Jason) Wang
+	Authors: Zezhi (Herry) Wang, Yajie (Angus) Zhao, Shikun (Jason) Wang
 	Date: Mar 17, 2018
 '''
 import unicast
@@ -22,8 +22,11 @@ class FifoMult:
 
 	# deliever msg (str sender, str msg)
 	def __deliever(self, sender, msg):
+		if msg == 'bye':
+			print "Listener is stopped, press ENTER to exit node."
+			return True
 		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
-		return msg == 'bye'
+		return False
 
 	# bool, if current node is still listening
 	def isUp(self):
@@ -39,37 +42,33 @@ class FifoMult:
 		self.__basic(val)
 
 	# handle received msg (str pid, dict msg)
-	def recv(self, pid, msg):
-		# helper func (str sender, int seq, str msg)
-		def helper(sender, seq, msg):
-			res = False
-			# if S = R[q] + 1
-			if seq == self.R_fifo[sender] + 1:
-				# Fifo deliever msg
-				res = self.__deliever(sender, msg)
-				# increment R[q]
-				self.R_fifo[sender] += 1
-			# if S > R[q]
-			elif seq > self.R_fifo[sender] + 1:
-				# put msg in hold-back queue
-				self.hbQueue.append((sender,seq,msg))
-			# check msg in hold-back queue
-			for i in xrange(len(self.hbQueue)):				
-				for val in self.hbQueue:
-					sender,seq,msg = val
-					# if s = r[pid] + 1
-					if seq == self.R_fifo[sender] + 1:
-						# remove msg from hold back queue
-						self.hbQueue.remove(val)
-						# deliever msg
-						res = self.__deliever(sender, msg)
-						# increment r[pid] by 1
-						self.R_fifo[sender] += 1
-			# else reject
-			return res
-		seq, val = msg['seq'], msg['msg']
-		# handle msg received
-		return helper(int(pid), seq, val)
+	def recv(self, pid, data):
+		sender, seq, msg = int(pid), data['seq'], data['msg']
+		res = False
+		# if S = R[q] + 1
+		if seq == self.R_fifo[sender] + 1:
+			# Fifo deliever msg
+			res = self.__deliever(sender, msg)
+			# increment R[q]
+			self.R_fifo[sender] += 1
+		# if S > R[q]
+		elif seq > self.R_fifo[sender] + 1:
+			# put msg in hold-back queue
+			self.hbQueue.append((sender,seq,msg))
+		# check msg in hold-back queue
+		for i in xrange(len(self.hbQueue)):				
+			for val in self.hbQueue:
+				sender,seq,msg = val
+				# if s = r[pid] + 1
+				if seq == self.R_fifo[sender] + 1:
+					# remove msg from hold back queue
+					self.hbQueue.remove(val)
+					# deliever msg
+					res = self.__deliever(sender, msg)
+					# increment r[pid] by 1
+					self.R_fifo[sender] += 1
+		# else reject
+		return res
 
 	# constructor (str pid, int maxServer, int[] delay_range)
 	def __init__(self, pid, maxServer, delay_range):
@@ -87,14 +86,18 @@ class FifoMult:
 
 class TotalMult:
 	# basic multicast (str msg)
-	def __basic(self, msg):
+	def __basic(self, msg, pid = None):
 		for idx in config_map.keys():
-			self.node.unicast_send(idx, msg)
+			if idx != pid:
+				self.node.unicast_send(idx, msg)
 
 	# deliever msg (int sender, str msg)
 	def __deliever(self, sender, msg):
+		if msg == 'bye':
+			print "Listener is stopped, press ENTER to exit node."
+			return True
 		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
-		return msg == 'bye'
+		return False
 
 	# if current node is still listening
 	def isUp(self):
@@ -114,11 +117,13 @@ class TotalMult:
 		print "Sequencer received msg from", pid
 		if pid != self.pid:
 			# construct msg
-			msg = {'flag':1, 'S': self.S_total, 'pid':pid, 'msg': "fk", 'I':data['I']}
+			msg = {'flag':1, 'S': self.S_total, 'pid':pid, 'msg': "seq", 'I':data['I']}
 			# basic multicast msg
-			self.__basic(msg)
+			self.__basic(msg, self.pid)
 			# increment S_Total
 			self.S_total += 1
+			return data['msg'] == 'bye'
+		return False
 
 	# handle received msg (str pid, dict msg)
 	def recv(self, pid, msg):
@@ -142,7 +147,7 @@ class TotalMult:
 			return False
 		# if current node is sequencer
 		if self.pid == '0':
-			self.__seqRecv(pid, msg)
+			return self.__seqRecv(pid, msg)
 		else: # current node is not sequencer
 			# if not from sequencer
 			if msg['flag'] == 0:
@@ -159,15 +164,17 @@ class TotalMult:
 	def __init__(self, pid, maxServer, delay_range):
 		# self pid
 		self.pid = pid
-		# hold-back queue
-		self.hbQueue = []
-		# hold-back queue for sequencer
-		self.seqs = []
 		# init local send counter
 		self.S_total = 0
 		if pid != '0': # if not sequencer
 			# init group member recived counter
 			self.R_total = 0
+			# hold-back queue
+			self.hbQueue = []
+			# hold-back queue for sequencer
+			self.seqs = []
+		else:
+			print "This node is sequencer."
 		# init unicast client
 		self.maxServer = maxServer
 		self.node = unicast.Unicast(pid, int(maxServer), delay_range, self.recv)
@@ -180,8 +187,11 @@ class CausalMult:
 
 	# deliever msg (int sender, str msg)
 	def __deliever(self, sender, msg):
-		print "Receive %s from process %d with time %f" % ( msg, sender, time.time())
-		return msg == 'bye'
+		if msg == 'bye':
+			print "Listener is stopped, press ENTER to exit node."
+			return True
+		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
+		return False
 
 	# if current node is still listening
 	def isUp(self):
@@ -198,42 +208,39 @@ class CausalMult:
 	
 	# handle received msg (str pid, dict msg)
 	def recv(self, pid, msg):
-		# helper func (int sender, int[] vec, str val)
-		def helper(sender, vec, val):
-			# place val in hold-back queue
-			self.hbQueue.append((sender, vec, val))
-			# loop through queue
-			for i in range(len(self.hbQueue)):
-				for val in self.hbQueue:
-					sender, vec, msg = val
-
-					# receivce msg from itself
-					if sender == int (self.pid):
-						#deliver the oldest msg
-						if vec[sender] == self.deliver_own + 1:
-							if self.__deliever(sender, msg):
-								return True
-							# remove msg from hold back queue
-							self.hbQueue.remove(val)
-							self.deliver_own +=1
-					# receive msg from others
-					elif vec[sender] == self.V_causal[sender] + 1: #make sure deliver myself
-						flag = True
-						for idx in xrange(self.maxServer):
-							# if vec is newest (check all the slots except itself and the sender)
-							if vec[idx] > self.V_causal[idx] and not (idx == sender):
-								flag = False
-								break
-						if flag:
-							# deliever msg
-							if self.__deliever(sender, msg):
-								return True
-							# remove msg from hold back queue
-							self.hbQueue.remove(val)
-							# increment v[sender] if sender is not current node 
-							self.V_causal[sender] += 1
-			return False
-		return helper(int(pid), msg['vec'], msg['msg'])
+		sender, vec, val = int(pid), msg['vec'], msg['msg']
+		# place val in hold-back queue
+		self.hbQueue.append((sender, vec, val))
+		# loop through queue
+		for i in range(len(self.hbQueue)):
+			for val in self.hbQueue:
+				sender, vec, msg = val
+				# receivce msg from itself
+				if sender == int (self.pid):
+					#deliver the oldest msg
+					if vec[sender] == self.deliver_own + 1:
+						if self.__deliever(sender, msg):
+							return True
+						# remove msg from hold back queue
+						self.hbQueue.remove(val)
+						self.deliver_own +=1
+				# receive msg from others
+				elif vec[sender] == self.V_causal[sender] + 1: #make sure deliver myself
+					flag = True
+					for idx in xrange(self.maxServer):
+						# if vec is newest (check all the slots except itself and the sender)
+						if vec[idx] > self.V_causal[idx] and not (idx == sender):
+							flag = False
+							break
+					if flag:
+						# deliever msg
+						if self.__deliever(sender, msg):
+							return True
+						# remove msg from hold back queue
+						self.hbQueue.remove(val)
+						# increment v[sender] if sender is not current node 
+						self.V_causal[sender] += 1
+		return False
 
 	# constructor (str pid, int maxServer, int[] delay_range)
 	def __init__(self, pid, maxServer, delay_range):
@@ -251,21 +258,20 @@ class CausalMult:
 		self.node = unicast.Unicast(pid, maxServer, delay_range, self.recv)
 
 # type of multicast nodes
-mults = [FifoMult, TotalMult, CausalMult]
+mults = {'fifo':FifoMult, 'total':TotalMult, 'causal':CausalMult}
 def Main():
 	# get usr input for pid, order, maxServer
-	pid, order, maxServer = sys.argv[1:4]
+	pid, maxServer, order = sys.argv[1:4]
 	delay_range = unicast.delay_range
+	# init multicast node
+	node = mults[order](pid, int(maxServer), delay_range)
 
 	print "<<<<<<< chat room >>>>>>>>"
-	
-	# init multicast node
-	node = mults[int(order)](pid, int(maxServer), delay_range)	
 	while True:
 		# take input
 		userInput = raw_input()
+		# stop if node is not listening
 		if not node.isUp():
-			# stop if node is not listening
 			break
 		# get msg
 		_,msg = userInput.split(" ",1)
