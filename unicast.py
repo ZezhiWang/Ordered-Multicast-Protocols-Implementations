@@ -124,9 +124,8 @@ class Unicast:
 
 		#get the random number of delay range as our network delay
 		delay_time = uniform(self.delay_range[0], self.delay_range[1])
-		msg = {'msg': message}
 		#create a thread to send the message
-		Thread(target=self.delay_send, args=(destination, msg, delay_time)).start()
+		Thread(target=self.delay_send, args=(destination, message, delay_time)).start()
 
 
 	def delay_send(self, destination, message, delay_time):
@@ -157,7 +156,7 @@ def main():
 		if not unicast_node.isRunning():
 			break
 		_, dest, message = user_input.split(" ", 2)
-		unicast_node.unicast_send(dest, message)
+		unicast_node.unicast_send(dest, {'msg':message})
 
 if __name__ == "__main__":
 	main()
