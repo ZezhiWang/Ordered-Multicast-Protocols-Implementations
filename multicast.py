@@ -191,7 +191,6 @@ class CausalMult:
 
 	# deliever msg (int sender, str msg)
 	def __deliever(self, sender, msg):
-		self.num_deliver += 1
 		if msg == 'bye':
 			print "Listener is stopped, press ENTER to exit node."
 			return True
@@ -218,8 +217,6 @@ class CausalMult:
 		# place val in hold-back queue
 		self.hbQueue.append((sender, vec, val))
 		# loop through queue
-		print self.hbQueue
-		print self.V_causal
 		for i in range(len(self.hbQueue)):
 			for val in self.hbQueue:
 				sender, vec, msg = val
