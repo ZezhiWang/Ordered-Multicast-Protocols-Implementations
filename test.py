@@ -13,7 +13,6 @@ def Main():
 
 	system_time_start = time.time()
 	for i in xrange(int(numMsg)*int(pid), int(numMsg)*(int(pid)+1) ):
-		#time.sleep(0.1)
 		node.send(str(i))
 
 

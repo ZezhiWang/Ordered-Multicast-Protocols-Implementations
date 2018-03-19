@@ -79,7 +79,7 @@ class FifoMult:
 		# num of msg cur server has sent to group
 		self.S_fifo = 0
 		# seq num of latest group msg cur server has delievered from other server
-		self.R_fifo = [0 for i in config_map.keys()]
+		self.R_fifo = [0 for i in xrange(maxServer)]
 		self.maxServer = maxServer
 		# init unicast client
 		self.node = unicast.Unicast(pid, maxServer, delay_range, self.recv)
