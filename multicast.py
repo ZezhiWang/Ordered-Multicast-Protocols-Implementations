@@ -195,6 +195,7 @@ class CausalMult:
 			print "Listener is stopped, press ENTER to exit node."
 			return True
 		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
+		self.num_deliver +=1
 		return False
 
 	# if current node is still listening
@@ -228,7 +229,6 @@ class CausalMult:
 						# remove msg from hold back queue
 						self.hbQueue.remove(val)
 						self.deliver_own +=1
-						self.num_deliver +=1
 				# receive msg from others
 				elif vec[sender] == self.V_causal[sender] + 1: #make sure deliver myself
 					flag = True
@@ -243,9 +243,9 @@ class CausalMult:
 							return True
 						# remove msg from hold back queue
 						self.hbQueue.remove(val)
-						self.num_deliver +=1
 						# increment v[sender] if sender is not current node 
 						self.V_causal[sender] += 1
+		print self.hbQueue
 		return False
 
 	# constructor (str pid, int maxServer, int[] delay_range)
