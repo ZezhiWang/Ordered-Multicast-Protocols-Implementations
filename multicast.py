@@ -22,6 +22,7 @@ class FifoMult:
 
 	# deliever msg (str sender, str msg)
 	def __deliever(self, sender, msg):
+		self.num_deliver += 1
 		if msg == 'bye':
 			print "Listener is stopped, press ENTER to exit node."
 			return True
@@ -72,6 +73,7 @@ class FifoMult:
 
 	# constructor (str pid, int maxServer, int[] delay_range)
 	def __init__(self, pid, maxServer, delay_range):
+		self.num_deliver = 0
 		# self pid
 		self.pid = pid
 		# num of msg cur server has sent to group
@@ -93,6 +95,7 @@ class TotalMult:
 
 	# deliever msg (int sender, str msg)
 	def __deliever(self, sender, msg):
+		self.num_deliver += 1
 		if msg == 'bye':
 			print "Listener is stopped, press ENTER to exit node."
 			return True
@@ -162,6 +165,7 @@ class TotalMult:
 
 	# constructor (str pid, int maxServer, int[] delay_range)
 	def __init__(self, pid, maxServer, delay_range):
+		self.num_deliver = 0
 		# self pid
 		self.pid = pid
 		# init local send counter
@@ -174,7 +178,7 @@ class TotalMult:
 			# hold-back queue for sequencer
 			self.seqs = []
 		else:
-			print "This node is sequencer."
+			print "This node is sequencer, plz don't send msg from this node."
 		# init unicast client
 		self.maxServer = maxServer
 		self.node = unicast.Unicast(pid, int(maxServer), delay_range, self.recv)
@@ -245,7 +249,7 @@ class CausalMult:
 	# constructor (str pid, int maxServer, int[] delay_range)
 	def __init__(self, pid, maxServer, delay_range):
 		#local clock to keep track of delivering own msg
-		self.deliver_own = 0
+		self.num_deliver = 0
 		# hold-back queue
 		self.hbQueue = []
 		# seld id
@@ -287,6 +291,8 @@ def Main():
 		_,msg = userInput.split(" ",1)
 		# multicast msg
 		node.send(msg)
+
+
 
 if __name__ == "__main__":
 	Main()
