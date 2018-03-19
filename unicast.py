@@ -76,6 +76,10 @@ class Unicast:
 		self.config_inv = config_inv
 		self.pid = pid
 		self.running = True
+		#random seed for testing
+		#each node has different seed
+		self.random_seed = [x for x in range(max_number)]
+		seed(self.random_seed[int(self.pid)]) 
 		#Spawn a thread for listening msg from other nodes
 		Thread(target=self.socket_listen_thread, args=(strategy,)).start()
 
@@ -124,6 +128,7 @@ class Unicast:
 
 		#get the random number of delay range as our network delay
 		delay_time = uniform(self.delay_range[0], self.delay_range[1])
+		print delay_time
 		#create a thread to send the message
 		Thread(target=self.delay_send, args=(destination, message, delay_time)).start()
 
