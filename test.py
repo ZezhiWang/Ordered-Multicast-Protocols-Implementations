@@ -7,14 +7,17 @@ def Main():
 	pid, maxServer, order, numMsg = sys.argv[1:5]
 	node = multicast.mults[order](pid, int(maxServer), unicast.delay_range)
 
-	time.sleep(5)
+	waitTime = int(maxServer)*int(numMsg) if order != 'total' else (int(maxServer)+1)*int(numMsg)
+
+	time.sleep(20)
 
 	system_time_start = time.time()
 	for i in xrange(int(numMsg)*int(pid), int(numMsg)*(int(pid)+1) ):
 		#time.sleep(0.1)
 		node.send(str(i))
 
-	while node.num_deliver < int(maxServer)*int(numMsg):
+
+	while node.num_deliver < waitTime:
 		continue
 	system_time_stop = time.time()
 	node.send('bye')

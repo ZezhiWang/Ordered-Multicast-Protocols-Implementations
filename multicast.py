@@ -191,6 +191,7 @@ class CausalMult:
 
 	# deliever msg (int sender, str msg)
 	def __deliever(self, sender, msg):
+		self.num_deliver += 1
 		if msg == 'bye':
 			print "Listener is stopped, press ENTER to exit node."
 			return True
