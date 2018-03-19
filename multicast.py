@@ -224,6 +224,7 @@ class CausalMult:
 						# remove msg from hold back queue
 						self.hbQueue.remove(val)
 						self.deliver_own +=1
+						self.number_deliver +=1
 				# receive msg from others
 				elif vec[sender] == self.V_causal[sender] + 1: #make sure deliver myself
 					flag = True
@@ -238,6 +239,7 @@ class CausalMult:
 							return True
 						# remove msg from hold back queue
 						self.hbQueue.remove(val)
+						self.number_deliver +=1
 						# increment v[sender] if sender is not current node 
 						self.V_causal[sender] += 1
 		return False
@@ -245,7 +247,8 @@ class CausalMult:
 	# constructor (str pid, int maxServer, int[] delay_range)
 	def __init__(self, pid, maxServer, delay_range):
 		#local clock to keep track of delivering own msg
-		self.deliver_own = 0
+		self.deliver_own = 0 
+		self.num_deliver = 0
 		# hold-back queue
 		self.hbQueue = []
 		# seld id
