@@ -17,8 +17,8 @@ config_map = unicast.config_map
 class FifoMult:
 	# basic multicast (str msg)
 	def __basic(self, msg):
-		for idx in config_map.keys():
-			self.node.unicast_send(idx, msg)
+		for idx in xrange(self.maxServer):
+			self.node.unicast_send(str(idx), msg)
 
 	# deliever msg (str sender, str msg)
 	def __deliever(self, sender, msg):
@@ -89,9 +89,9 @@ class FifoMult:
 class TotalMult:
 	# basic multicast (str msg)
 	def __basic(self, msg, pid = None):
-		for idx in config_map.keys():
+		for idx in xrange(self.maxServer):
 			if idx != pid:
-				self.node.unicast_send(idx, msg)
+				self.node.unicast_send(str(idx), msg)
 
 	# deliever msg (int sender, str msg)
 	def __deliever(self, sender, msg):
@@ -186,8 +186,8 @@ class TotalMult:
 class CausalMult:
 	# basic multicast (sre msg)
 	def __basic(self, msg):
-		for idx in config_map.keys():
-			self.node.unicast_send(idx, msg)
+		for idx in xrange(self.maxServer):
+			self.node.unicast_send(str(idx), msg)
 
 	# deliever msg (int sender, str msg)
 	def __deliever(self, sender, msg):
@@ -228,7 +228,7 @@ class CausalMult:
 						# remove msg from hold back queue
 						self.hbQueue.remove(val)
 						self.deliver_own +=1
-						self.number_deliver +=1
+						self.num_deliver +=1
 				# receive msg from others
 				elif vec[sender] == self.V_causal[sender] + 1: #make sure deliver myself
 					flag = True
@@ -243,7 +243,7 @@ class CausalMult:
 							return True
 						# remove msg from hold back queue
 						self.hbQueue.remove(val)
-						self.number_deliver +=1
+						self.num_deliver +=1
 						# increment v[sender] if sender is not current node 
 						self.V_causal[sender] += 1
 		return False

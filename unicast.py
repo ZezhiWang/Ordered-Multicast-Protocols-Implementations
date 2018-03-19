@@ -97,7 +97,7 @@ class Unicast:
 		try:
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		except socket.error as err:
-			print "socket creation failed with error %s" %(err)
+			print "socket creation failed with error"
 			sys.exit(1)
 		#bind socket to the corresponding port number and id number
 		sock.bind((self.config_map[self.pid][0], self.config_map[self.pid][1]))
@@ -114,7 +114,7 @@ class Unicast:
 			try:
 				pid, message = conn.recv(1024).split(",", 1)
 			except socket.error, e:
-				print "Error receiving data %s" % e
+				print "Error receiving data"
 
 			data_received = pickle.loads(message)
 			#use particular ordering the deliver
@@ -136,7 +136,6 @@ class Unicast:
 
 		#get the random number of delay range as our network delay
 		delay_time = uniform(self.delay_range[0], self.delay_range[1])
-		print delay_time
 		#create a thread to send the message
 		Thread(target=self.delay_send, args=(destination, message, delay_time)).start()
 
@@ -154,7 +153,7 @@ class Unicast:
 		try:
 			send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		except socket.error, e:
-			print "Error creating socket: %s" % e
+			print "err"
 			sys.exit(1)
 		print "    Sent " + message['msg'] + " to process "+ destination + " with system time: " + str(time.time())
 		host, port = self.config_map[destination]
@@ -164,16 +163,16 @@ class Unicast:
 		try:
 			send_socket.connect((host, port)) #connect to host/port and send
 		except socket.gaierror, e:
-			print "Address-related error connecting to server %s" % e
+			print "err"
 			#sys.exit(1)
 		except socket.error, e:
-			print "Connection error %s" % e
+			print "err"
 			#sys.exit(1)
 
 		try:
 			send_socket.send(self.pid + "," + data)
 		except socket.error, e:
-			print "Error sending data %s" % e
+			print "err"
 			#sys.exit(1)
 		send_socket.close() # closed the socket when finish
 
