@@ -94,7 +94,11 @@ class Unicast:
 			strategy(func): fifo, total, casual ordering
 		'''
 		#create a listening socket
-		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		try:
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		except socket.error as err:
+			print "socket creation failed with error %s" %(err)
+			sys.exit(1)
 		#bind socket to the corresponding port number and id number
 		sock.bind((self.config_map[self.pid][0], self.config_map[self.pid][1]))
 		#set maximum number of nodes 
@@ -107,7 +111,11 @@ class Unicast:
 			#get the ip address and port number of the sender
 			ip, port = str(address[0]), int(address[1])
 			#decode the message received
-			pid, message = conn.recv(1024).split(",", 1)
+			try:
+				pid, message = conn.recv(1024).split(",", 1)
+			except socket.error, e:
+				print "Error receiving data %s" % e
+
 			data_received = pickle.loads(message)
 			#use particular ordering the deliver
 			flag = strategy(pid, data_received)
@@ -143,13 +151,30 @@ class Unicast:
 
 		'''
 		#send message
-		send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		try:
+			send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		except socket.error, e:
+			print "Error creating socket: %s" % e
+			sys.exit(1)
 		print "    Sent " + message['msg'] + " to process "+ destination + " with system time: " + str(time.time())
 		host, port = self.config_map[destination]
 		data = pickle.dumps(message) #serialized the message
 		time.sleep(delay_time) #network delay
-		send_socket.connect((host, port)) #connect to host/port and send
-		send_socket.send(self.pid + "," + data)
+
+		try:
+			send_socket.connect((host, port)) #connect to host/port and send
+		except socket.gaierror, e:
+			print "Address-related error connecting to server %s" % e
+			#sys.exit(1)
+		except socket.error, e:
+			print "Connection error %s" % e
+			#sys.exit(1)
+
+		try:
+			send_socket.send(self.pid + "," + data)
+		except socket.error, e:
+			print "Error sending data %s" % e
+			#sys.exit(1)
 		send_socket.close() # closed the socket when finish
 
 #testing unicast  
