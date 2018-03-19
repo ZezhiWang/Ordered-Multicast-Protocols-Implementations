@@ -137,7 +137,9 @@ class Unicast:
 		#get the random number of delay range as our network delay
 		delay_time = uniform(self.delay_range[0], self.delay_range[1])
 		#create a thread to send the message
-		Thread(target=self.delay_send, args=(destination, message, delay_time)).start()
+		print "    Sent " + message['msg'] + " to process "+ destination + " with system time: " + str(time.time())
+		data = pickle.dumps(message) #serialized the message
+		Thread(target=self.delay_send, args=(destination, data, delay_time)).start()
 
 
 	def delay_send(self, destination, message, delay_time):
@@ -155,9 +157,7 @@ class Unicast:
 		except socket.error, e:
 			print "err"
 			sys.exit(1)
-		print "    Sent " + message['msg'] + " to process "+ destination + " with system time: " + str(time.time())
 		host, port = self.config_map[destination]
-		data = pickle.dumps(message) #serialized the message
 		time.sleep(delay_time) #network delay
 
 		try:
@@ -170,7 +170,7 @@ class Unicast:
 			#sys.exit(1)
 
 		try:
-			send_socket.send(self.pid + "," + data)
+			send_socket.send(self.pid + "," + message)
 		except socket.error, e:
 			print "err"
 			#sys.exit(1)

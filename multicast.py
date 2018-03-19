@@ -218,6 +218,8 @@ class CausalMult:
 		# place val in hold-back queue
 		self.hbQueue.append((sender, vec, val))
 		# loop through queue
+		print self.hbQueue
+		print self.V_causal
 		for i in range(len(self.hbQueue)):
 			for val in self.hbQueue:
 				sender, vec, msg = val
@@ -246,7 +248,6 @@ class CausalMult:
 						self.hbQueue.remove(val)
 						# increment v[sender] if sender is not current node 
 						self.V_causal[sender] += 1
-		print self.hbQueue
 		return False
 
 	# constructor (str pid, int maxServer, int[] delay_range)

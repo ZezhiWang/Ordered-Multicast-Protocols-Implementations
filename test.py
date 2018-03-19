@@ -9,7 +9,7 @@ def Main():
 
 	waitTime = int(maxServer)*int(numMsg) if order != 'total' else (int(maxServer)+1)*int(numMsg)
 
-	time.sleep(20)
+	time.sleep(5)
 
 	system_time_start = time.time()
 	for i in xrange(int(numMsg)*int(pid), int(numMsg)*(int(pid)+1) ):
