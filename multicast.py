@@ -266,12 +266,22 @@ def Main():
 	# init multicast node
 	node = mults[order](pid, int(maxServer), delay_range)
 
+	start = 1
+	system_time = 0.0
 	print "<<<<<<< chat room >>>>>>>>"
 	while True:
 		# take input
 		userInput = raw_input()
+
+		#record the starting time after first input
+		if start:
+			system_time_start = time.time()
+		start = 0 
+		 
 		# stop if node is not listening
 		if not node.isUp():
+			#running time of this particular node
+			print time.time() - system_time_start
 			break
 		# get msg
 		_,msg = userInput.split(" ",1)
