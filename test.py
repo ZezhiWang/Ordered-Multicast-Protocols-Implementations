@@ -15,7 +15,7 @@ def Main():
 	for i in xrange(int(numMsg)*int(pid), int(numMsg)*(int(pid)+1) ):
 		node.send(str(i))
 
-
+	
 	while node.num_deliver < waitTime:
 		continue
 	system_time_stop = time.time()
