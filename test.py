@@ -7,7 +7,7 @@ def Main():
 	pid, maxServer, order, numMsg = sys.argv[1:5]
 	node = multicast.mults[order](pid, int(maxServer), unicast.delay_range)
 
-	waitTime = int(maxServer)*int(numMsg) if order != 'total' else (int(maxServer)+1)*int(numMsg)
+	waitTime = int(maxServer)*int(numMsg) if order != 'total' else (int(maxServer)-1)*int(numMsg)
 
 	time.sleep(5)
 
