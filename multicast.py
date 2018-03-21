@@ -26,7 +26,7 @@ class FifoMult:
 		if msg == 'bye':
 			print "Listener is stopped, press ENTER to exit node."
 			return True
-		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
+		print "Receive \"%s\" from process %s with time %f" % ( msg, sender, time.time())
 		return False
 
 	# bool, if current node is still listening
@@ -99,7 +99,7 @@ class TotalMult:
 		if msg == 'bye':
 			print "Listener is stopped, press ENTER to exit node."
 			return True
-		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
+		print "Receive \"%s\" from process %s with time %f" % ( msg, sender, time.time())
 		return False
 
 	# if current node is still listening
@@ -178,7 +178,7 @@ class TotalMult:
 			# hold-back queue for sequencer
 			self.seqs = []
 		else:
-			print "This node is sequencer, plz don't send msg from this node."
+			print "This node is sequencer, plz do NOT send msg from this node."
 		# init unicast client
 		self.maxServer = maxServer
 		self.node = unicast.Unicast(pid, int(maxServer), delay_range, self.recv)
@@ -194,7 +194,7 @@ class CausalMult:
 		if msg == 'bye':
 			print "Listener is stopped, press ENTER to exit node."
 			return True
-		print "Receive %s from process %s with time %f" % ( msg, sender, time.time())
+		print "Receive \"%s\" from process %s with time %f" % ( msg, sender, time.time())
 		self.num_deliver +=1
 		return False
 
@@ -269,21 +269,14 @@ def Main():
 	# get usr input for pid, order, maxServer
 	pid, maxServer, order = sys.argv[1:4]
 	delay_range = unicast.delay_range
+	print "<<<<<<< chat room >>>>>>>>"
 	# init multicast node
 	node = mults[order](pid, int(maxServer), delay_range)
-
-	start = 1
-	system_time = 0.0
-	print "<<<<<<< chat room >>>>>>>>"
+	#record the starting time
+	system_time_start = time.time()
 	while True:
 		# take input
 		userInput = raw_input()
-
-		#record the starting time after first input
-		if start:
-			system_time_start = time.time()
-		start = 0 
-		 
 		# stop if node is not listening
 		if not node.isUp():
 			#running time of this particular node
@@ -293,8 +286,6 @@ def Main():
 		_,msg = userInput.split(" ",1)
 		# multicast msg
 		node.send(msg)
-
-
 
 if __name__ == "__main__":
 	Main()

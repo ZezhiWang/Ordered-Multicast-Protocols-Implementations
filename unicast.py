@@ -57,7 +57,7 @@ class Unicast:
 		if message['msg'] == 'bye':
 			print "Listener stopped, press ENTER to exit."
 			return True
-		print "Received " + message['msg'] + " from process " + source + " with system time is " + str(time.time())
+		print "Received \"%s\" from process %s with system time: %f s" % (message['msg'], source, time.time())
 		return False
 
 	def __init__(self, pid, max_number, delay_range, strategy=unicast_receive, config_map = config_map, config_inv = config_inv):
@@ -76,9 +76,9 @@ class Unicast:
 		self.config_inv = config_inv
 		self.pid = pid
 		self.running = True
+		# init mutex lock
 		self.lock = Lock()
-		#random seed for testing
-		#each node has different seed
+		#random seed for testing, each node has different seed
 		self.random_seed = [x for x in range(max_number)]
 		seed(self.random_seed[int(self.pid)]) 
 		#Spawn a thread for listening msg from other nodes
@@ -134,14 +134,12 @@ class Unicast:
 			destination(str): the id number of the node of destination
 			message(str): message that we want to sent
 		'''
-
 		#get the random number of delay range as our network delay
 		delay_time = uniform(self.delay_range[0], self.delay_range[1])
 		#create a thread to send the message
-		print "    Sent " + message['msg'] + " to process "+ destination + " with system time: " + str(time.time())
+		print "\tSent \"%s\" to process %s with system time: %f s" % (message['msg'], destination, time.time())
 		data = pickle.dumps(message) #serialized the message
 		Thread(target=self.delay_send, args=(destination, data, delay_time)).start()
-
 
 	def delay_send(self, destination, message, delay_time):
 		'''function that used to send message with TCP
@@ -154,30 +152,18 @@ class Unicast:
 		'''
 		time.sleep(delay_time) #network delay
 
+		host, port = self.config_map[destination]
 		self.lock.acquire()
 		#send message
 		try:
 			send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		except socket.error, e:
-			print "err"
-			sys.exit(1)
-		host, port = self.config_map[destination]
-
-		try:
 			send_socket.connect((host, port)) #connect to host/port and send
-		except socket.gaierror, e:
-			print "err"
-			#sys.exit(1)
-		except socket.error, e:
-			print "err"
-			#sys.exit(1)
-
-		try:
 			send_socket.send(self.pid + "," + message)
+			send_socket.close() # closed the socket when finish
 		except socket.error, e:
-			print "err"
-			#sys.exit(1)
-		send_socket.close() # closed the socket when finish
+			print '\tListener already down.'
+		except socket.gaierror, e:
+			print '\tNothing is wrong.'
 		self.lock.release()
 
 #testing unicast  
