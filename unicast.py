@@ -6,7 +6,7 @@
 ''' 
 import socket #socket programming
 import sys
-from threading import Thread #multithreading
+from threading import Thread, Lock #multithreading
 import time
 from random import *
 import pickle	#data serialization
@@ -76,6 +76,7 @@ class Unicast:
 		self.config_inv = config_inv
 		self.pid = pid
 		self.running = True
+		self.lock = Lock()
 		#random seed for testing
 		#each node has different seed
 		self.random_seed = [x for x in range(max_number)]
@@ -151,6 +152,9 @@ class Unicast:
 			delay_time: simulated network delay
 
 		'''
+		time.sleep(delay_time) #network delay
+
+		self.lock.acquire()
 		#send message
 		try:
 			send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -158,7 +162,6 @@ class Unicast:
 			print "err"
 			sys.exit(1)
 		host, port = self.config_map[destination]
-		time.sleep(delay_time) #network delay
 
 		try:
 			send_socket.connect((host, port)) #connect to host/port and send
@@ -175,6 +178,7 @@ class Unicast:
 			print "err"
 			#sys.exit(1)
 		send_socket.close() # closed the socket when finish
+		self.lock.release()
 
 #testing unicast  
 def main():
