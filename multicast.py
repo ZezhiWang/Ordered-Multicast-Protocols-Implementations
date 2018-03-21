@@ -280,7 +280,7 @@ def Main():
 		# stop if node is not listening
 		if not node.isUp():
 			#running time of this particular node
-			print time.time() - system_time_start
+			print "process running time: %f s" % (time.time() - system_time_start)
 			break
 		# get msg
 		_,msg = userInput.split(" ",1)

@@ -170,6 +170,7 @@ class Unicast:
 def main():
 	pid = sys.argv[1]
 	unicast_node = Unicast(pid, 5, delay_range)	
+	print "Init unicast node."
 	while True:
 		user_input = raw_input()
 		if not unicast_node.isRunning():
